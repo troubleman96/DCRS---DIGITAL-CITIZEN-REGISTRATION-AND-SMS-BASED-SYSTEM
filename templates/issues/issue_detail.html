@@ -4,104 +4,261 @@
 
 {% block content %}
 
-<div class="page-header">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
-    <div>
-      <h2>{{ issue.title|truncatechars:70 }}</h2>
-      <p>{{ issue.reference_no }} &nbsp;·&nbsp; Reported by {{ issue.citizen.full_name }}</p>
-    </div>
-    <div style="display:flex;gap:8px">
-      <a class="btn btn-primary btn-sm" href="{% url 'issues:update' issue.pk %}">
-        <i class="bi bi-pencil"></i> Update
-      </a>
-      <a class="btn btn-outline btn-sm" href="{% url 'issues:list' %}">
-        <i class="bi bi-arrow-left"></i> Back
-      </a>
-    </div>
+{# ── Header ── #}
+<div class="d-flex align-items-start justify-content-between mb-4">
+  <div>
+    <div class="page-header-h">{{ issue.title|truncatechars:72 }}</div>
+    <div class="page-header-p">{{ issue.reference_no }} &nbsp;·&nbsp; Reported by {{ issue.citizen.full_name }}</div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn btn-outline btn-sm" href="{% url 'issues:list' %}">
+      <i class="bi bi-arrow-left"></i> Back
+    </a>
+    <a class="btn btn-outline btn-sm" href="{% url 'issues:update' issue.pk %}">
+      <i class="bi bi-pencil"></i> Update
+    </a>
+    <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid transparent"
+            data-bs-toggle="modal" data-bs-target="#deleteModal">
+      <i class="bi bi-trash"></i> Delete
+    </button>
   </div>
 </div>
 
-<!-- Status banner -->
-<div class="card mb-4" style="border-left:4px solid var(--accent)">
-  <div class="card-body" style="padding:16px 20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+{# ── Status banner ── #}
+<div class="card mb-4" style="border-left:3px solid var(--accent)">
+  <div class="card-body" style="padding:14px 20px !important;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
     <div>
-      <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">Status</div>
-      <span class="badge status-{{ issue.status }}" style="margin-top:4px;font-size:0.82rem">{{ issue.get_status_display }}</span>
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Status</div>
+      <span class="badge status-{{ issue.status }}" style="font-size:.8rem;padding:5px 12px">{{ issue.get_status_display }}</span>
     </div>
     <div>
-      <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">Priority</div>
-      <span class="badge priority-{{ issue.priority }}" style="margin-top:4px;font-size:0.82rem">{{ issue.get_priority_display }}</span>
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Priority</div>
+      <span class="badge priority-{{ issue.priority }}" style="font-size:.8rem;padding:5px 12px">{{ issue.get_priority_display }}</span>
     </div>
     <div>
-      <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">Category</div>
-      <span style="font-size:0.875rem;font-weight:600;color:var(--text)">{{ issue.get_category_display }}</span>
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Category</div>
+      <span style="font-size:.85rem;font-weight:700;color:var(--text)">{{ issue.get_category_display }}</span>
+    </div>
+    <div>
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Ward</div>
+      <span style="font-size:.85rem;font-weight:700;color:var(--text)">{{ issue.ward.name }}</span>
     </div>
     {% if issue.escalated_to_district %}
-    <div>
-      <span class="badge badge-red"><i class="bi bi-arrow-up-circle"></i> Escalated to District</span>
-    </div>
+    <span class="badge badge-red" style="font-size:.78rem;padding:5px 12px">
+      <i class="bi bi-arrow-up-circle me-1"></i>Escalated to District
+    </span>
     {% endif %}
-    <div style="margin-left:auto;font-size:0.82rem;color:var(--muted)">
-      Opened {{ issue.created_at|date:"d M Y, H:i" }}
+    <div style="margin-left:auto;font-size:.78rem;color:var(--muted)">
+      <i class="bi bi-clock me-1"></i>Opened {{ issue.created_at|date:"d M Y, H:i" }}
     </div>
   </div>
 </div>
 
-<div class="grid-2 mb-4">
-  <!-- Details -->
-  <div class="card">
-    <div class="card-header"><span class="card-title">Issue Details</span></div>
-    <div class="card-body">
-      <div class="detail-grid" style="grid-template-columns:1fr 1fr;margin-bottom:20px">
-        <div class="detail-item"><label>Citizen</label>
-          <strong><a href="{% url 'citizens:detail' issue.citizen.pk %}" style="color:var(--accent)">{{ issue.citizen.full_name }}</a></strong>
-        </div>
-        <div class="detail-item"><label>Ward</label><strong>{{ issue.ward.name }}</strong></div>
-        <div class="detail-item"><label>Assigned Officer</label>
-          <strong>{{ issue.assigned_officer|default:"Unassigned" }}</strong>
-        </div>
-        <div class="detail-item"><label>Last Updated</label>
-          <strong>{{ issue.updated_at|date:"d M Y" }}</strong>
-        </div>
+{# ── Two-column body ── #}
+<div class="row g-4">
+
+  {# ── LEFT — issue details + comments ── #}
+  <div class="col-lg-8">
+
+    {# Description #}
+    <div class="card mb-3">
+      <div class="card-header"><span class="card-title"><i class="bi bi-file-text me-1" style="color:var(--accent)"></i> Description</span></div>
+      <div class="card-body">
+        <p style="font-size:.9rem;color:var(--text2);line-height:1.8;margin:0">{{ issue.description }}</p>
+      </div>
+    </div>
+
+    {# Internal notes #}
+    {% if issue.internal_notes %}
+    <div class="card mb-3" style="border-left:3px solid var(--amber)">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-lock me-1" style="color:var(--amber)"></i> Internal Notes</span>
+        <span class="badge badge-amber" style="font-size:.7rem">Staff only</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:.88rem;color:var(--text2);line-height:1.7;margin:0">{{ issue.internal_notes }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Comments #}
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-chat-left-text me-1" style="color:var(--accent)"></i> Comments</span>
+        <span class="badge badge-gray">{{ comments|length }}</span>
       </div>
 
-      <div>
-        <div style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px">Description</div>
-        <p style="color:var(--text-soft);font-size:0.9rem;line-height:1.7;margin:0">{{ issue.description }}</p>
+      {# Comment list #}
+      <div style="padding:0 20px">
+        {% for comment in comments %}
+        <div style="padding:14px 0;border-bottom:1px solid var(--border);display:flex;gap:12px">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-tint);border:1px solid var(--accent-xdim);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;color:var(--accent);flex-shrink:0;margin-top:2px">
+            {{ comment.author.get_full_name|default:comment.author.username|slice:":1"|upper }}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
+              <span style="font-size:.82rem;font-weight:700;color:var(--text)">{{ comment.author.get_full_name|default:comment.author.username }}</span>
+              <span style="font-size:.72rem;color:var(--muted)">{{ comment.created_at|date:"d M Y, H:i" }}</span>
+              {% if comment.is_internal %}
+              <span class="badge badge-amber" style="font-size:.65rem;padding:2px 7px"><i class="bi bi-lock me-1"></i>Internal</span>
+              {% endif %}
+            </div>
+            <p style="font-size:.85rem;color:var(--text2);margin:0;line-height:1.6">{{ comment.body }}</p>
+          </div>
+          <form method="post" action="{% url 'issues:comment_delete' comment.pk %}" style="flex-shrink:0">
+            {% csrf_token %}
+            <button type="submit" title="Delete comment"
+                    style="background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;font-size:.8rem;opacity:.5"
+                    onmouseover="this.style.opacity='1';this.style.color='var(--red)'"
+                    onmouseout="this.style.opacity='.5';this.style.color='var(--muted)'">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </form>
+        </div>
+        {% empty %}
+        <div style="padding:32px 0;text-align:center;color:var(--muted);font-size:.83rem">
+          <i class="bi bi-chat-left" style="font-size:1.4rem;display:block;margin-bottom:8px;opacity:.35"></i>
+          No comments yet.
+        </div>
+        {% endfor %}
       </div>
 
-      {% if issue.internal_notes %}
-      <div style="margin-top:20px;padding:14px 16px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid rgba(180,83,9,0.2)">
-        <div style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--warning);margin-bottom:6px">
-          <i class="bi bi-lock"></i> Internal Notes
-        </div>
-        <p style="font-size:0.875rem;color:var(--text-soft);margin:0">{{ issue.internal_notes }}</p>
+      {# Add comment form #}
+      <div style="padding:16px 20px;border-top:1px solid var(--border);background:var(--surface2);border-radius:0 0 var(--r3) var(--r3)">
+        <form method="post">
+          {% csrf_token %}
+          <div style="margin-bottom:10px">
+            {{ comment_form.body }}
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <label style="display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--text2);cursor:pointer">
+              {{ comment_form.is_internal }}
+              <span>Mark as internal (staff only)</span>
+            </label>
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-send me-1"></i> Post Comment
+            </button>
+          </div>
+        </form>
       </div>
-      {% endif %}
+
     </div>
   </div>
 
-  <!-- Citizen info quick panel -->
-  <div class="card">
-    <div class="card-header"><span class="card-title">Citizen Profile</span></div>
-    <div class="card-body">
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
-        <div class="user-avatar" style="width:48px;height:48px;font-size:1rem">
-          {{ issue.citizen.full_name|slice:":1"|upper }}
+  {# ── RIGHT — meta + citizen + quick actions ── #}
+  <div class="col-lg-4">
+
+    {# Assignment card #}
+    <div class="card mb-3">
+      <div class="card-header"><span class="card-title"><i class="bi bi-person-badge me-1" style="color:var(--accent)"></i> Assignment</span></div>
+      <div class="card-body" style="padding:0 !important">
+        <div style="padding:11px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Officer</span>
+          {% if issue.assigned_officer %}
+            <div style="text-align:right">
+              <div style="font-size:.82rem;font-weight:700;color:var(--text)">{{ issue.assigned_officer.get_full_name|default:issue.assigned_officer.username }}</div>
+              <div style="font-size:.72rem;color:var(--muted)">{{ issue.assigned_officer.role }}</div>
+            </div>
+          {% else %}
+            <span class="badge badge-gray">Unassigned</span>
+          {% endif %}
         </div>
-        <div>
-          <div style="font-weight:700;color:var(--text)">{{ issue.citizen.full_name }}</div>
-          <div style="font-size:0.8rem;color:var(--muted)">{{ issue.citizen.phone_number }}</div>
+        <div style="padding:11px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
+          <span style="font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Last Updated</span>
+          <span style="font-size:.82rem;color:var(--text)">{{ issue.updated_at|date:"d M Y" }}</span>
+        </div>
+        {% if issue.closed_at %}
+        <div style="padding:11px 18px;display:flex;justify-content:space-between">
+          <span style="font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Closed</span>
+          <span style="font-size:.82rem;color:var(--text)">{{ issue.closed_at|date:"d M Y" }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Citizen card #}
+    <div class="card mb-3">
+      <div class="card-header">
+        <span class="card-title"><i class="bi bi-person me-1" style="color:var(--accent)"></i> Citizen</span>
+        <a href="{% url 'citizens:detail' issue.citizen.pk %}" style="font-size:.75rem;font-weight:600;color:var(--accent)">
+          View profile <i class="bi bi-arrow-right" style="font-size:.7rem"></i>
+        </a>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--accent-tint);border:1px solid var(--accent-xdim);display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:800;color:var(--accent);flex-shrink:0">
+            {{ issue.citizen.full_name|slice:":1"|upper }}
+          </div>
+          <div>
+            <div style="font-size:.88rem;font-weight:700;color:var(--text)">{{ issue.citizen.full_name }}</div>
+            <div style="font-size:.78rem;color:var(--muted)">{{ issue.citizen.phone_number }}</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;font-size:.8rem">
+            <span style="color:var(--muted)">ID</span>
+            <span style="font-family:monospace;font-weight:600;color:var(--text)">{{ issue.citizen.citizen_id }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.8rem">
+            <span style="color:var(--muted)">Status</span>
+            <span class="badge status-{{ issue.citizen.status }}">{{ issue.citizen.get_status_display }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.8rem">
+            <span style="color:var(--muted)">Location</span>
+            <span style="color:var(--text);font-weight:600;text-align:right">{{ issue.citizen.ward.name }}, {{ issue.citizen.district.name }}</span>
+          </div>
         </div>
       </div>
-      <div class="detail-grid" style="grid-template-columns:1fr 1fr">
-        <div class="detail-item"><label>ID</label><strong>{{ issue.citizen.citizen_id }}</strong></div>
-        <div class="detail-item"><label>Status</label>
-          <span class="badge status-{{ issue.citizen.status }}">{{ issue.citizen.get_status_display }}</span>
-        </div>
-        <div class="detail-item" style="grid-column:1/-1"><label>Location</label>
-          <strong>{{ issue.citizen.ward.name }}, {{ issue.citizen.district.name }}</strong>
-        </div>
+    </div>
+
+    {# Quick actions #}
+    <div class="card">
+      <div class="card-header"><span class="card-title">Quick Actions</span></div>
+      <div class="card-body" style="padding:12px !important;display:flex;flex-direction:column;gap:8px">
+        <a href="{% url 'issues:update' issue.pk %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+          <i class="bi bi-pencil-square"></i> Update Status / Officer
+        </a>
+        <a href="{% url 'notifications:compose' %}?recipient={{ issue.citizen.phone_number }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+          <i class="bi bi-chat-dots"></i> SMS Citizen
+        </a>
+        <a href="{% url 'citizens:detail' issue.citizen.pk %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+          <i class="bi bi-person"></i> View Citizen Profile
+        </a>
+        <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid transparent;justify-content:flex-start;gap:8px"
+                data-bs-toggle="modal" data-bs-target="#deleteModal">
+          <i class="bi bi-trash"></i> Delete Issue
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{# ── Delete modal ── #}
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r3)">
+      <div class="modal-header" style="border-bottom:1px solid var(--border);padding:16px 20px">
+        <h5 class="modal-title" style="font-size:.95rem;font-weight:700;color:var(--text)">
+          <i class="bi bi-exclamation-triangle-fill me-2" style="color:var(--red)"></i>Delete Issue
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:20px">
+        <p style="font-size:.88rem;color:var(--text2);margin:0">
+          Permanently delete issue <strong>{{ issue.reference_no }}</strong>:
+          <em>{{ issue.title|truncatechars:60 }}</em>?
+          All comments will also be removed. This cannot be undone.
+        </p>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--border);padding:12px 20px;gap:8px">
+        <button class="btn btn-outline btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <form method="post" action="{% url 'issues:delete' issue.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm" style="background:var(--red);color:#fff;border:none">
+            <i class="bi bi-trash me-1"></i> Delete permanently
+          </button>
+        </form>
       </div>
     </div>
   </div>

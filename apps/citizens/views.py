@@ -1,9 +1,10 @@
 from django.apps import apps
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DetailView, ListView, TemplateView
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 
-from .forms import CitizenRegistrationForm
+from .forms import CitizenEditForm, CitizenRegistrationForm
 from .models import Citizen
 
 
@@ -64,9 +65,38 @@ class CitizenDetailView(LoginRequiredMixin, DetailView):
     template_name = "citizens/citizen_detail.html"
     context_object_name = "citizen"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        Issue = apps.get_model("issues", "Issue")
+        context["citizen_issues"] = Issue.objects.filter(
+            citizen=self.object
+        ).select_related("ward", "assigned_officer").order_by("-created_at")[:10]
+        return context
+
+
+class CitizenUpdateView(LoginRequiredMixin, UpdateView):
+    model = Citizen
+    form_class = CitizenEditForm
+    template_name = "citizens/citizen_edit.html"
+    context_object_name = "citizen"
+
+    def get_success_url(self):
+        messages.success(self.request, f"{self.object.full_name}'s profile has been updated.")
+        return reverse_lazy("citizens:detail", kwargs={"pk": self.object.pk})
+
+
+class CitizenDeleteView(LoginRequiredMixin, DeleteView):
+    model = Citizen
+    template_name = "citizens/citizen_confirm_delete.html"
+    context_object_name = "citizen"
+    success_url = reverse_lazy("citizens:list")
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Citizen record for {self.object.full_name} has been deleted.")
+        return super().form_valid(form)
+
 
 class CitizenStatusView(LoginRequiredMixin, DetailView):
     model = Citizen
     template_name = "citizens/citizen_status.html"
     context_object_name = "citizen"
-
