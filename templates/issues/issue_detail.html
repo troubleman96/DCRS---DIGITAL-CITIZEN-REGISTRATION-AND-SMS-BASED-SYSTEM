@@ -11,16 +11,22 @@
     <div class="page-header-p">{{ issue.reference_no }} &nbsp;·&nbsp; Reported by {{ issue.citizen.full_name }}</div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <a class="btn btn-outline btn-sm" href="{% url 'issues:list' %}">
-      <i class="bi bi-arrow-left"></i> Back
-    </a>
-    <a class="btn btn-outline btn-sm" href="{% url 'issues:update' issue.pk %}">
-      <i class="bi bi-pencil"></i> Update
-    </a>
-    <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid transparent"
-            data-bs-toggle="modal" data-bs-target="#deleteModal">
-      <i class="bi bi-trash"></i> Delete
-    </button>
+    {% if user.role == 'CITIZEN' %}
+      <a class="btn btn-outline btn-sm" href="{% url 'citizens:portal' %}">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
+    {% else %}
+      <a class="btn btn-outline btn-sm" href="{% url 'issues:list' %}">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
+      <a class="btn btn-outline btn-sm" href="{% url 'issues:update' issue.pk %}">
+        <i class="bi bi-pencil"></i> Update
+      </a>
+      <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid transparent"
+              data-bs-toggle="modal" data-bs-target="#deleteModal">
+        <i class="bi bi-trash"></i> Delete
+      </button>
+    {% endif %}
   </div>
 </div>
 
@@ -68,8 +74,8 @@
       </div>
     </div>
 
-    {# Internal notes #}
-    {% if issue.internal_notes %}
+    {# Internal notes — staff only #}
+    {% if issue.internal_notes and user.role != 'CITIZEN' %}
     <div class="card mb-3" style="border-left:3px solid var(--amber)">
       <div class="card-header">
         <span class="card-title"><i class="bi bi-lock me-1" style="color:var(--amber)"></i> Internal Notes</span>
@@ -131,10 +137,14 @@
             {{ comment_form.body }}
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            {% if user.role != 'CITIZEN' %}
             <label style="display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--text2);cursor:pointer">
               {{ comment_form.is_internal }}
               <span>Mark as internal (staff only)</span>
             </label>
+            {% else %}
+            <span></span>
+            {% endif %}
             <button type="submit" class="btn btn-primary btn-sm">
               <i class="bi bi-send me-1"></i> Post Comment
             </button>
@@ -215,19 +225,28 @@
     <div class="card">
       <div class="card-header"><span class="card-title">Quick Actions</span></div>
       <div class="card-body" style="padding:12px !important;display:flex;flex-direction:column;gap:8px">
-        <a href="{% url 'issues:update' issue.pk %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
-          <i class="bi bi-pencil-square"></i> Update Status / Officer
-        </a>
-        <a href="{% url 'notifications:compose' %}?recipient={{ issue.citizen.phone_number }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
-          <i class="bi bi-chat-dots"></i> SMS Citizen
-        </a>
-        <a href="{% url 'citizens:detail' issue.citizen.pk %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
-          <i class="bi bi-person"></i> View Citizen Profile
-        </a>
-        <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid transparent;justify-content:flex-start;gap:8px"
-                data-bs-toggle="modal" data-bs-target="#deleteModal">
-          <i class="bi bi-trash"></i> Delete Issue
-        </button>
+        {% if user.role == 'CITIZEN' %}
+          <a href="{% url 'citizens:portal' %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+            <i class="bi bi-house"></i> Back to My Portal
+          </a>
+          <a href="{% url 'issues:submit' %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+            <i class="bi bi-plus-circle"></i> Report Another Issue
+          </a>
+        {% else %}
+          <a href="{% url 'issues:update' issue.pk %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+            <i class="bi bi-pencil-square"></i> Update Status / Officer
+          </a>
+          <a href="{% url 'notifications:compose' %}?recipient={{ issue.citizen.phone_number }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+            <i class="bi bi-chat-dots"></i> SMS Citizen
+          </a>
+          <a href="{% url 'citizens:detail' issue.citizen.pk %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+            <i class="bi bi-person"></i> View Citizen Profile
+          </a>
+          <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid transparent;justify-content:flex-start;gap:8px"
+                  data-bs-toggle="modal" data-bs-target="#deleteModal">
+            <i class="bi bi-trash"></i> Delete Issue
+          </button>
+        {% endif %}
       </div>
     </div>
 
