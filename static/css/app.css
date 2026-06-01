@@ -379,6 +379,10 @@ textarea.form-control { resize: vertical; min-height: 96px; }
 .td-bold  { font-weight: 600; color: var(--text); }
 .table-wrap { overflow-x: auto; border-radius: var(--r3); border: 1px solid var(--border); }
 
+/* ── Page header ─────────────────────────────────────────────── */
+.page-header-h { font-size: 1.25rem; font-weight: 800; color: var(--text); letter-spacing: -.025em; line-height: 1.2; }
+.page-header-p { font-size: 0.82rem; color: var(--muted); margin-top: 3px; }
+
 /* ── Dropdown ────────────────────────────────────────────────── */
 .dropdown-menu {
   background: var(--surface) !important; border: 1px solid var(--border2) !important;

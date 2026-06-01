@@ -39,3 +39,10 @@ class SMSLogListView(LoginRequiredMixin, ListView):
     template_name = "notifications/sms_log.html"
     paginate_by = 12
     context_object_name = "sms_logs"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["delivered_count"] = SMSLog.objects.filter(status=SMSLog.Status.DELIVERED).count()
+        context["sent_count"] = SMSLog.objects.filter(status=SMSLog.Status.SENT).count()
+        context["failed_count"] = SMSLog.objects.filter(status=SMSLog.Status.FAILED).count()
+        return context
