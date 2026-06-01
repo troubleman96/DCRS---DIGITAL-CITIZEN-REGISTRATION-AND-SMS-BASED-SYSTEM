@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}SMS Log — DCRS{% endblock %}
+{% block page_title %}SMS Log{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+    <div>
+      <h2>SMS Log</h2>
+      <p>Message delivery history and statuses.</p>
+    </div>
+    <a class="btn btn-primary" href="{% url 'notifications:compose' %}">
+      <i class="bi bi-plus-lg"></i> Compose SMS
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrap" style="border:none">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Recipient</th>
+          <th>Message</th>
+          <th>Status</th>
+          <th>Provider</th>
+          <th>Sent At</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in sms_logs %}
+          <tr>
+            <td class="mono">{{ log.recipient }}</td>
+            <td style="max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-soft)">{{ log.message_body }}</td>
+            <td>
+              <span class="badge {% if log.status == 'DELIVERED' %}badge-green{% elif log.status == 'SENT' %}badge-blue{% elif log.status == 'FAILED' %}badge-red{% else %}badge-gray{% endif %}">
+                {{ log.status }}
+              </span>
+            </td>
+            <td style="color:var(--muted);font-size:0.82rem">{{ log.provider }}</td>
+            <td class="mono">{{ log.sent_at|date:"d M, H:i"|default:"—" }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" style="text-align:center;color:var(--muted);padding:60px 20px">
+              <i class="bi bi-chat-dots" style="font-size:2rem;display:block;margin-bottom:10px"></i>
+              No SMS messages sent yet.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if is_paginated %}
+    <div class="card-footer">{% include 'partials/pagination.html' %}</div>
+  {% endif %}
+</div>
+
+{% endblock %}

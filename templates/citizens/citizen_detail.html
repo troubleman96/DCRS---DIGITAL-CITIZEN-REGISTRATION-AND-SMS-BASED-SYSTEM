@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}{{ citizen.full_name }} — DCRS{% endblock %}
+{% block page_title %}Citizen Detail{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+    <div>
+      <h2>{{ citizen.full_name }}</h2>
+      <p>{{ citizen.citizen_id }} &nbsp;·&nbsp; Registered citizen profile</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <a class="btn btn-outline btn-sm" href="{% url 'citizens:status' citizen.pk %}">
+        <i class="bi bi-info-circle"></i> Status
+      </a>
+      <a class="btn btn-outline btn-sm" href="{% url 'citizens:list' %}">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="grid-2 mb-4">
+  <div class="card card-body" style="display:flex;align-items:center;gap:20px">
+    <div class="user-avatar" style="width:64px;height:64px;font-size:1.4rem">
+      {{ citizen.full_name|slice:":1"|upper }}
+    </div>
+    <div>
+      <div style="font-size:1.2rem;font-weight:700;color:var(--text)">{{ citizen.full_name }}</div>
+      <div style="color:var(--muted);font-size:0.875rem;margin-top:3px">{{ citizen.phone_number }}</div>
+      <div style="margin-top:8px">
+        <span class="badge status-{{ citizen.status }}">{{ citizen.get_status_display }}</span>
+        <span class="badge badge-gray" style="margin-left:6px">{{ citizen.get_gender_display }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card card-body">
+    <div class="detail-grid" style="grid-template-columns:1fr 1fr">
+      <div class="detail-item">
+        <label>Citizen ID</label>
+        <strong>{{ citizen.citizen_id }}</strong>
+      </div>
+      <div class="detail-item">
+        <label>National ID</label>
+        <strong>{{ citizen.national_id }}</strong>
+      </div>
+      <div class="detail-item">
+        <label>Date of Birth</label>
+        <strong>{{ citizen.date_of_birth|default:"—" }}</strong>
+      </div>
+      <div class="detail-item">
+        <label>Registered</label>
+        <strong>{{ citizen.created_at|date:"d M Y" }}</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <span class="card-title"><i class="bi bi-geo-alt" style="color:var(--accent)"></i> Location</span>
+  </div>
+  <div class="card-body">
+    <div class="detail-grid">
+      <div class="detail-item"><label>Region</label><strong>{{ citizen.region.name }}</strong></div>
+      <div class="detail-item"><label>District</label><strong>{{ citizen.district.name }}</strong></div>
+      <div class="detail-item"><label>Ward</label><strong>{{ citizen.ward.name }}</strong></div>
+      <div class="detail-item"><label>Mtaa</label><strong>{{ citizen.mtaa.name|default:"—" }}</strong></div>
+    </div>
+  </div>
+</div>
+
+{% if citizen.registration_notes %}
+<div class="card">
+  <div class="card-header"><span class="card-title">Registration Notes</span></div>
+  <div class="card-body">
+    <p style="color:var(--text-soft);margin:0;font-size:0.9rem">{{ citizen.registration_notes }}</p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
