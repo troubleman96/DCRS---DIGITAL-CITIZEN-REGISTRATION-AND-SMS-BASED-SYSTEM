@@ -20,9 +20,14 @@ class CitizenPortalView(LoginRequiredMixin, TemplateView):
             profile = None
         context["profile"] = profile
         if profile:
-            context["my_issues"] = Issue.objects.filter(citizen=profile).order_by("-created_at")[:10]
+            my_issues = Issue.objects.filter(citizen=profile).order_by("-created_at")
+            context["my_issues"] = my_issues[:10]
+            context["open_count"] = my_issues.exclude(
+                status__in=["RESOLVED", "CLOSED"]
+            ).count()
         else:
             context["my_issues"] = []
+            context["open_count"] = 0
         return context
 
 
