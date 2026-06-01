@@ -12,6 +12,12 @@ class OfficerLoginPageView(LoginView):
     authentication_form = OfficerLoginForm
     redirect_authenticated_user = True
 
+    def get_success_url(self):
+        user = self.request.user
+        if user.role == user.Role.CITIZEN:
+            return reverse_lazy("citizens:portal")
+        return reverse_lazy("reports:dashboard")
+
 
 class OfficerLogoutView(LogoutView):
     next_page = reverse_lazy("citizens:home")

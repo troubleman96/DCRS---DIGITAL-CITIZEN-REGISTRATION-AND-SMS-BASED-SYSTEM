@@ -7,6 +7,24 @@ from .forms import CitizenRegistrationForm
 from .models import Citizen
 
 
+class CitizenPortalView(LoginRequiredMixin, TemplateView):
+    template_name = "citizens/portal.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        Issue = apps.get_model("issues", "Issue")
+        try:
+            profile = self.request.user.citizen_profile
+        except Citizen.DoesNotExist:
+            profile = None
+        context["profile"] = profile
+        if profile:
+            context["my_issues"] = Issue.objects.filter(citizen=profile).order_by("-created_at")[:10]
+        else:
+            context["my_issues"] = []
+        return context
+
+
 class CitizenHomeView(TemplateView):
     template_name = "citizens/home.html"
 

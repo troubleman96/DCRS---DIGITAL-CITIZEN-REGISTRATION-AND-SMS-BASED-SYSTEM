@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}My Portal — DCRS{% endblock %}
+
+{% block content %}
+<div style="max-width:860px;margin:0 auto;padding:32px 20px">
+
+  {# ── Welcome ── #}
+  <div style="margin-bottom:28px">
+    <h1 style="font-size:1.4rem;font-weight:800;margin:0 0 4px;color:var(--text)">
+      Welcome, {{ request.user.get_first_name|default:request.user.username }}
+    </h1>
+    <p style="font-size:.85rem;color:var(--text-soft);margin:0">
+      DCRS Citizen Portal &nbsp;·&nbsp; District Citizen Response System
+    </p>
+  </div>
+
+  {# ── Registration status card ── #}
+  {% if profile %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);margin-bottom:4px">Registration</div>
+        <div style="font-size:1rem;font-weight:700;color:var(--text)">{{ profile.full_name }}</div>
+        <div style="font-size:.8rem;color:var(--text-soft);margin-top:2px">ID: {{ profile.citizen_id }} &nbsp;·&nbsp; {{ profile.ward.name }}, {{ profile.district.name }}</div>
+      </div>
+      <span class="badge status-{{ profile.status }}" style="font-size:.8rem;padding:6px 14px">
+        {% if profile.status == 'APPROVED' %}<i class="bi bi-check-circle-fill"></i>
+        {% elif profile.status == 'PENDING' %}<i class="bi bi-hourglass-split"></i>
+        {% elif profile.status == 'REJECTED' %}<i class="bi bi-x-circle-fill"></i>
+        {% else %}<i class="bi bi-pause-circle-fill"></i>{% endif %}
+        &nbsp;{{ profile.get_status_display }}
+      </span>
+    </div>
+    {% if profile.status == 'PENDING' %}
+    <div style="margin-top:14px;padding:10px 14px;background:var(--surface-raised);border-radius:var(--radius-sm);font-size:.8rem;color:var(--text-soft)">
+      <i class="bi bi-info-circle"></i> Your registration is under review. You will be notified via SMS once processed.
+    </div>
+    {% elif profile.status == 'REJECTED' %}
+    <div style="margin-top:14px;padding:10px 14px;background:#fee2e220;border-left:3px solid #f87171;border-radius:var(--radius-sm);font-size:.8rem;color:var(--text-soft)">
+      <i class="bi bi-exclamation-triangle"></i> Your registration was not approved. Please visit your nearest district office for assistance.
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;text-align:center">
+    <i class="bi bi-person-plus" style="font-size:2rem;color:var(--text-soft);display:block;margin-bottom:10px"></i>
+    <div style="font-size:.95rem;font-weight:700;margin-bottom:6px;color:var(--text)">No registration found</div>
+    <p style="font-size:.82rem;color:var(--text-soft);margin-bottom:16px">Your account is not linked to a citizen record yet.</p>
+    <a href="{% url 'citizens:register' %}" class="btn btn-sm btn-primary">
+      <i class="bi bi-person-plus"></i> Register Now
+    </a>
+  </div>
+  {% endif %}
+
+  {# ── Quick actions ── #}
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:28px">
+    <a href="{% url 'issues:submit' %}" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-decoration:none;display:flex;align-items:center;gap:12px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="width:38px;height:38px;border-radius:50%;background:var(--accent)20;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="bi bi-megaphone-fill" style="color:var(--accent);font-size:1rem"></i>
+      </div>
+      <div>
+        <div style="font-size:.82rem;font-weight:700;color:var(--text)">Report Issue</div>
+        <div style="font-size:.73rem;color:var(--text-soft)">Submit a community problem</div>
+      </div>
+    </a>
+
+    {% if profile %}
+    <a href="{% url 'citizens:status' profile.pk %}" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;text-decoration:none;display:flex;align-items:center;gap:12px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="width:38px;height:38px;border-radius:50%;background:#4ade8020;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="bi bi-card-checklist" style="color:#4ade80;font-size:1rem"></i>
+      </div>
+      <div>
+        <div style="font-size:.82rem;font-weight:700;color:var(--text)">My Status</div>
+        <div style="font-size:.73rem;color:var(--text-soft)">View registration details</div>
+      </div>
+    </a>
+    {% endif %}
+  </div>
+
+  {# ── My issues ── #}
+  <div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h2 style="font-size:1rem;font-weight:800;margin:0;color:var(--text)">My Reported Issues</h2>
+      <a href="{% url 'issues:submit' %}" style="font-size:.78rem;font-weight:600;color:var(--accent)">
+        + New issue
+      </a>
+    </div>
+
+    {% if my_issues %}
+    <div style="display:flex;flex-direction:column;gap:10px">
+      {% for issue in my_issues %}
+      <a href="{% url 'issues:detail' issue.pk %}" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;text-decoration:none;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="min-width:0">
+          <div style="font-size:.82rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ issue.title }}</div>
+          <div style="font-size:.73rem;color:var(--text-soft);margin-top:2px">
+            {{ issue.reference_no }} &nbsp;·&nbsp; {{ issue.category }} &nbsp;·&nbsp; {{ issue.created_at|date:"d M Y" }}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span style="font-size:.7rem;font-weight:600;padding:3px 10px;border-radius:20px;
+            {% if issue.priority == 'CRITICAL' %}background:#fee2e2;color:#dc2626
+            {% elif issue.priority == 'HIGH' %}background:#fff7ed;color:#ea580c
+            {% else %}background:var(--surface-raised);color:var(--text-soft){% endif %}">
+            {{ issue.priority }}
+          </span>
+          <span class="badge status-{{ issue.status }}" style="font-size:.7rem">{{ issue.get_status_display }}</span>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:36px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">
+      <i class="bi bi-megaphone" style="font-size:1.8rem;color:var(--text-soft);display:block;margin-bottom:8px;opacity:.4"></i>
+      <div style="font-size:.85rem;color:var(--text-soft)">No issues reported yet.</div>
+      <a href="{% url 'issues:submit' %}" style="display:inline-block;margin-top:12px;font-size:.8rem;font-weight:600;color:var(--accent)">Report your first issue</a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

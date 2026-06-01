@@ -25,8 +25,40 @@
 </head>
 <body>
 
-{% if user.is_authenticated %}
-  {# ── Authenticated shell ─────────────────────────────────────────── #}
+{% if user.is_authenticated and user.role == 'CITIZEN' %}
+  {# ── Citizen shell ───────────────────────────────────────────────── #}
+  <div class="public-shell">
+    <header class="public-header">
+      <a class="public-brand" href="{% url 'citizens:portal' %}">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                  stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-name">DCRS</div>
+          <div class="brand-sub">Citizen Portal</div>
+        </div>
+      </a>
+      <div class="header-actions">
+        <button class="btn-theme" data-theme-toggle title="Toggle theme">
+          <i class="bi bi-moon"></i>
+          <span class="theme-label">Dark</span>
+        </button>
+        <span style="font-size:.78rem;color:var(--text-soft);padding:0 4px">{{ user.get_full_name|default:user.username }}</span>
+        <form method="post" action="{% url 'accounts:logout' %}" style="margin:0;display:inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm" style="background:transparent;border:1px solid var(--border-strong);color:var(--text-soft);border-radius:var(--radius-sm)">
+            <i class="bi bi-box-arrow-right"></i> Sign out
+          </button>
+        </form>
+      </div>
+    </header>
+    {% include 'partials/messages.html' %}
+
+{% elif user.is_authenticated %}
+  {# ── Staff shell ─────────────────────────────────────────────────── #}
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <div class="app-shell" id="appShell">
     {% include 'partials/sidebar.html' %}
@@ -66,7 +98,9 @@
 {# ── ONE block content, works for both shells ────────────────────── #}
 {% block content %}{% endblock %}
 
-{% if user.is_authenticated %}
+{% if user.is_authenticated and user.role == 'CITIZEN' %}
+  </div>{# /citizen public-shell #}
+{% elif user.is_authenticated %}
       </div>{# /app-content #}
     </div>{# /app-main #}
   </div>{# /app-shell #}

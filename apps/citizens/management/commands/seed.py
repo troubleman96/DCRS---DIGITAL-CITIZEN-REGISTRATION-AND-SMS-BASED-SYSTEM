@@ -104,19 +104,19 @@ class Command(BaseCommand):
         self.stdout.write("2/6  Users")
 
         USERS = [
-            dict(username="admin_user",         password="Admin@1234",   role="ADMIN",
+            dict(username="admin_user",         password="test1234",     role="ADMIN",
                  first_name="System",  last_name="Administrator", email="admin@dcrs.go.tz",
                  phone_number="+255700000001", national_id="19850101-00001-00001-1",
                  is_staff=True, is_superuser=True, ward=None),
-            dict(username="officer_kinondoni",  password="Officer@1234", role="OFFICER",
+            dict(username="officer_kinondoni",  password="test1234", role="OFFICER",
                  first_name="Juma",   last_name="Mwalimu",        email="juma.mwalimu@dcrs.go.tz",
                  phone_number="+255700000002", national_id="19900215-00002-00002-2",
                  is_staff=True, ward=loc["ward_mwananyamala"]),
-            dict(username="officer_ilala",      password="Officer@1234", role="OFFICER",
+            dict(username="officer_ilala",      password="test1234", role="OFFICER",
                  first_name="Fatuma", last_name="Salehe",          email="fatuma.salehe@dcrs.go.tz",
                  phone_number="+255700000003", national_id="19921108-00003-00003-3",
                  is_staff=True, ward=loc["ward_kariakoo"]),
-            dict(username="citizen_user",       password="Citizen@1234", role="CITIZEN",
+            dict(username="citizen_user",       password="test1234", role="CITIZEN",
                  first_name="Amina",  last_name="Hassan",          email="amina.hassan@example.com",
                  phone_number="+255700000004", national_id="19950320-00004-00004-4",
                  is_staff=False, ward=None),
@@ -309,8 +309,9 @@ class Command(BaseCommand):
         self.stdout.write("""
   ROLE        USERNAME              PASSWORD
   ─────────────────────────────────────────────
-  Admin       admin_user            Admin@1234
-  Officer     officer_kinondoni     Officer@1234
-  Officer     officer_ilala         Officer@1234
-  Citizen     citizen_user          Citizen@1234
+  Superuser   admin                 test1234
+  Admin       admin_user            test1234
+  Officer     officer_kinondoni     test1234
+  Officer     officer_ilala         test1234
+  Citizen     citizen_user          test1234
 """)
