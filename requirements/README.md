@@ -9,6 +9,8 @@ Python dependency files split by environment.
 ```
 Django>=5.0,<5.3   # Web framework
 Pillow>=10         # Image processing for citizen profile photos
+python-dotenv>=1.0 # Loads .env into os.environ
+requests>=2.31     # HTTP client used to call the SendAfrica SMS API
 ```
 
 ### `development.txt` — development dependencies
@@ -33,19 +35,6 @@ pip install psycopg2-binary
 
 Add `psycopg2-binary` to `requirements/base.txt` when targeting a PostgreSQL production server.
 
-## Adding a real SMS gateway
+## SMS gateway — already live
 
-When replacing the Internal Simulator with a real provider, add the gateway's Python SDK here. For example:
-
-```
-# Beem Africa
-beem-client>=1.0
-
-# Africa's Talking
-africastalking>=1.0
-
-# Twilio
-twilio>=8.0
-```
-
-Then update `apps/notifications/services.py` to call the provider API.
+`requests` (above) is all that's needed — `apps/notifications/services.py` calls the **SendAfrica** REST API directly over plain HTTPS, no dedicated SDK required. Set `SENDAFRICA_API_KEY` in `.env` to switch from the internal simulator to real sends; see `apps/notifications/README.md` for the full integration details.

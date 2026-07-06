@@ -6,12 +6,14 @@ This directory contains every Django application in the DCRS project. Each app i
 
 | App | Responsibility |
 |---|---|
-| `accounts` | Custom User model, login/logout, OTP stub, password reset |
+| `accounts` | Custom User model, login/logout, OTP stub, password reset, `WardScopedQuerysetMixin` |
 | `localities` | Geographic hierarchy: Region → District → Ward → Mtaa |
-| `citizens` | Citizen registration, profiles, approval workflow, citizen portal |
-| `issues` | Community issue logging, assignment, escalation, resolution |
-| `notifications` | SMS templates, compose to individual, broadcast to ward, delivery log |
+| `citizens` | Citizen registration, profiles, ward-scoped approve/reject workflow, citizen portal |
+| `issues` | Issue logging, One-Stop Services Centre, technician appointments, citizen feedback, escalation |
+| `notifications` | Real SendAfrica SMS send + delivery webhook, notification inbox, staff-relayed two-way SMS |
 | `reports` | Real-time dashboard, registration reports, audit trail |
+
+`accounts.WardScopedQuerysetMixin` is the shared building block behind officer-locality access control: both `citizens` and `issues` list/detail/update views mix it in so an OFFICER only ever sees records in their own ward, while ADMIN/superuser accounts see everything.
 
 ## App load order
 

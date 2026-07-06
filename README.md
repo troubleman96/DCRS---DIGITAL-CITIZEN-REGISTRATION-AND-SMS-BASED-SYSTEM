@@ -1,6 +1,6 @@
 # DCRS — District Citizen Response System
 
-> A unified command centre for citizen registrations, community issue tracking, and ward-level SMS communications — built for Tanzanian municipal workflows.
+> A unified command centre for citizen registrations, ward-scoped approval workflows, a One-Stop emergency services centre, and real SMS communications via SendAfrica — built for Tanzanian municipal workflows.
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5.2-092E20?style=flat-square&logo=django&logoColor=white)
@@ -11,7 +11,29 @@
 
 ## Overview
 
-DCRS is a full-stack Django web application for Tanzanian district local government. It gives officers a single platform to register and approve citizens, track and escalate community problems, send targeted SMS notifications, and maintain a complete audit trail — while citizens get their own lightweight portal to check registration status and report issues.
+DCRS is a full-stack Django web application for Tanzanian district local government. It gives ward officers a single platform to approve citizens in their own locality, run a One-Stop Emergency & Services Centre (water, electricity, waste, roads, security), schedule technician appointments, collect citizen feedback, and send real SMS via the SendAfrica gateway — with a complete audit trail and in-app notification inbox throughout. Citizens get their own lightweight portal to register, check status, file service requests, track appointments, and rate the service they received.
+
+---
+
+## How It Works — Start to Finish
+
+**1. A citizen registers.** Anyone visits the public site and fills in the registration form (name, national ID, phone, gender, DOB, Region → District → Ward → Mtaa, optional photo). The record is created with status `PENDING` and a unique `CIT-XXXXXXXXXX` ID.
+
+**2. The ward officer reviews it.** Officers only ever see citizens (and issues) inside their **own ward** — an officer in Mwananyamala never sees a Kariakoo registration. On the citizen's detail page the officer clicks **Approve** or **Reject**:
+   - **Approve** → status flips to `APPROVED`, and the citizen is sent an SMS confirming it plus a web notification (if they have a linked login).
+   - **Reject** → the officer must type a reason in a modal; it's saved on the record and sent to the citizen by SMS, along with a notification.
+
+**3. The citizen logs in to their portal** and, once approved, sees a **One-Stop Emergency & Services Centre** tile grid — Water, Electricity, Waste, Roads, Security. Picking one opens the issue form with that category pre-selected (and their own citizen/ward pre-filled).
+
+**4. The request lands with staff** as an `Issue` (`ISS-XXXXXXXXXX`), ward-scoped the same way citizens are. An officer assigns a **technician name and appointment date/time** — this fires another SMS + notification to the citizen with the visit details.
+
+**5. If the citizen calls or texts the officer's phone directly** (SendAfrica has no inbound/shortcode webhook), the officer logs what was said into the issue's **SMS Conversation** thread and can send a reply from the same screen — a "staff-relayed" two-way SMS log that sits right next to the automatic outbound messages.
+
+**6. Once the technician visits and the officer marks the issue `RESOLVED`**, the citizen gets an SMS + notification asking them to rate it. Back in the portal, they leave a **1–5 star rating and comment**, visible to staff on the same page afterward.
+
+**7. Every status change is audited** (`AuditLog`) and every SMS — outbound or staff-logged inbound — is recorded in the **SMS Log** with real delivery status. SendAfrica pushes delivery confirmations back to a webhook, flipping `SENT` → `DELIVERED`/`FAILED` automatically. Staff can also **Compose** a one-off SMS or **Broadcast** to an entire ward at any time, and everyone (staff and citizens) gets a bell-icon **notification inbox** for registration, appointment, and resolution updates.
+
+Throughout, `admin_user` (ADMIN) sees and can act on everything district-wide, while `officer_*` accounts are locked to their assigned ward — the officer-locality model the whole approval and service flow is built around.
 
 ---
 
@@ -90,12 +112,17 @@ Citizens have a completely separate portal (no staff sidebar). The portal shows 
 | Module | Capability |
 |---|---|
 | **Citizen Registration** | Full profiles — national ID, DOB, gender, photo, Region→District→Ward→Mtaa, approval workflow (Pending / Approved / Rejected / Suspended) |
-| **Issue Tracking** | Log, categorise (Water, Road, Sanitation, Lighting, Security), prioritise (Low→Critical), assign to officer, escalate to district, resolve, close |
+| **Ward-Scoped Approval** | Officers only see/act on citizens and issues in their own ward (admins see all); dedicated Approve/Reject actions with a required rejection reason, both SMS + notification on the outcome |
+| **One-Stop Services Centre** | Citizen-facing tile grid — Water, Electricity, Waste, Roads, Security — that pre-fills a service request in the right category |
+| **Appointments & Feedback** | Officers assign a technician name + appointment date/time (SMS on assignment); once resolved, the citizen leaves a 1–5 star rating + comment, visible to staff |
+| **Issue Tracking** | Log, categorise, prioritise (Low→Critical), assign to officer, escalate to district, resolve, close |
 | **Comments** | Staff thread on each issue with internal (staff-only) flag and per-comment delete |
-| **SMS Communications** | Compose to individual, broadcast to ward, Kiswahili template library, full delivery log with QUEUED / SENT / DELIVERED / FAILED tracking |
+| **Real SMS via SendAfrica** | Live outbound SMS (not simulated) with delivery-status webhook, error handling, and a Kiswahili template library |
+| **Staff-Relayed Two-Way SMS** | Officers log what a citizen said over a phone call directly on the issue, threaded next to the automatic outbound messages, with an optional instant reply |
+| **Notification Inbox** | Bell-icon dropdown + full inbox for both staff and citizens — registration, appointment, and resolution updates, read/unread |
 | **Role-Based Access** | ADMIN, OFFICER, CITIZEN — separate UIs, separate post-login redirects, role-aware page elements |
 | **Reports** | Registration report filterable by ward and status; quick-filter shortcut cards |
-| **Audit Trail** | Every action logged with actor, entity type, entity ID, summary, and timestamp |
+| **Audit Trail** | Every citizen/issue action logged in real time (via model signals) with actor, entity type, entity ID, summary, and timestamp |
 | **Geographic Hierarchy** | Region → District → Ward → Mtaa mirroring Tanzania's official administrative boundaries |
 | **Dark Mode** | Full light/dark theme toggle persisted in localStorage |
 
@@ -109,7 +136,7 @@ Citizens have a completely separate portal (no staff sidebar). The portal shows 
 | Database | SQLite (dev) / PostgreSQL (production) |
 | Frontend | Bootstrap 5.3, Bootstrap Icons 1.11, Inter font, vanilla JS |
 | Auth | Django auth with custom User model (role + phone + ward) |
-| SMS | Internal Simulator (swap for Beem Africa / Africa's Talking / Twilio) |
+| SMS | **SendAfrica** (`api.sendafrica.online`) — real outbound send + delivery webhook; falls back to an internal simulator automatically when no API key is configured |
 | Deployment | Gunicorn + Nginx + Let's Encrypt on Ubuntu 22.04 |
 
 ---
@@ -140,24 +167,49 @@ Visit `http://127.0.0.1:8000`
 
 ---
 
+## SMS Configuration (SendAfrica)
+
+SMS works out of the box with **no setup** — leave `SENDAFRICA_API_KEY` blank in `.env` and every send falls back to an internal simulator that logs messages instantly as `SENT` (no real network calls, safe for local dev/demo).
+
+To send real SMS:
+
+```bash
+# .env
+SENDAFRICA_BASE_URL=https://api.sendafrica.online
+SENDAFRICA_API_KEY=your-key-from-the-sendafrica-dashboard
+SENDAFRICA_SENDER_ID=                       # optional — leave blank for default
+```
+
+Get a key at `https://sendafrica.online` → Settings → API Keys. Then, in the SendAfrica dashboard under **SMS → Settings → Callback URLs**, point delivery reports at your deployed domain:
+
+```
+https://<your-domain>/portal/sms/callback/
+```
+
+This lets `SMSCallbackView` flip `SENT` → `DELIVERED`/`FAILED` automatically as the network confirms delivery. See `apps/notifications/README.md` for the full integration details.
+
+---
+
 ## Test Credentials
 
 All accounts use password **`test1234`**.
 
-| Role | Username | Lands on |
-|---|---|---|
-| Superuser / Officer | `admin` | Staff dashboard |
-| Admin | `admin_user` | Staff dashboard |
-| Officer | `officer_kinondoni` | Staff dashboard |
-| Officer | `officer_ilala` | Staff dashboard |
-| Citizen | `citizen_user` | Citizen portal |
+| Role | Username | Ward | Lands on |
+|---|---|---|---|
+| Superuser / Officer | `admin` | — (sees all) | Staff dashboard |
+| Admin | `admin_user` | — (sees all) | Staff dashboard |
+| Officer | `officer_kinondoni` | Mwananyamala | Staff dashboard |
+| Officer | `officer_ilala` | Kariakoo | Staff dashboard |
+| Citizen | `citizen_user` | Mwananyamala | Citizen portal |
 
 Login: `http://127.0.0.1:8000/accounts/login/`
+
+Each officer's ward has at least one `PENDING` citizen seeded so the Approve/Reject flow is demoable immediately after a fresh seed (`officer_kinondoni` → Halima Ramadhani, `officer_ilala` → Chausiku Nyundo).
 
 Re-seed at any time:
 ```bash
 python manage.py seed          # safe, skips existing rows
-python manage.py seed --flush  # wipe and re-seed fresh
+python manage.py seed --flush  # wipe and re-seed fresh — resets to the pristine demo state above
 ```
 
 ---
@@ -167,11 +219,11 @@ python manage.py seed --flush  # wipe and re-seed fresh
 ```
 DCRS/
 ├── apps/
-│   ├── accounts/        # Custom User model, login, OTP stub
-│   ├── citizens/        # Citizen profiles, approval, portal, seed command
-│   ├── issues/          # Issue tracking, comments, escalation
+│   ├── accounts/        # Custom User model, login, OTP stub, WardScopedQuerysetMixin
+│   ├── citizens/        # Citizen profiles, ward-scoped approve/reject, portal, seed command
+│   ├── issues/          # Issues, One-Stop Services Centre, appointments, feedback, escalation
 │   ├── localities/      # Region → District → Ward → Mtaa
-│   ├── notifications/   # SMS compose, broadcast, log
+│   ├── notifications/   # SendAfrica SMS, delivery webhook, notification inbox, two-way SMS relay
 │   └── reports/         # Dashboard, registration report, audit trail
 ├── config/              # settings.py, urls.py, wsgi.py
 ├── screenshots/         # App screenshots (this README)

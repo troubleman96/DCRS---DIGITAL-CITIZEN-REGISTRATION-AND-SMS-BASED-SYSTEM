@@ -1,6 +1,6 @@
 # apps/citizens/
 
-Manages citizen records — the core entity of the DCRS system. Handles registration, profile storage, approval workflow, and the citizen-facing portal.
+Manages citizen records — the core entity of the DCRS system. Handles registration, profile storage, the ward-scoped approval workflow, and the citizen-facing portal.
 
 ## Model: `Citizen`
 
@@ -15,21 +15,30 @@ Manages citizen records — the core entity of the DCRS system. Handles registra
 | `date_of_birth` | DateField | Optional |
 | `region` | ForeignKey → Region | Top-level geography |
 | `district` | ForeignKey → District | Sub-region |
-| `ward` | ForeignKey → Ward | Local ward |
+| `ward` | ForeignKey → Ward | Local ward — this is what officer access is scoped by |
 | `mtaa` | ForeignKey → Mtaa | Street/neighbourhood (optional) |
 | `profile_photo` | ImageField | Uploaded to `media/citizens/photos/` |
 | `registration_notes` | TextField | Officer notes on the record |
 | `status` | CharField (choices) | `PENDING` → `APPROVED` / `REJECTED` / `SUSPENDED` |
+| `rejection_reason` | TextField | Set when an officer rejects the registration; sent to the citizen by SMS |
 
 ## Status workflow
 
 ```
 PENDING (default on registration)
    │
-   ├──► APPROVED   (officer review passes)
-   ├──► REJECTED   (duplicate ID, fraud, incomplete docs)
-   └──► SUSPENDED  (post-approval account action)
+   ├──► APPROVED   (officer clicks Approve)
+   ├──► REJECTED   (officer clicks Reject, must type a reason)
+   └──► SUSPENDED  (post-approval account action, via edit form)
 ```
+
+Status is **not** editable through the generic edit form anymore — `CitizenEditForm` explicitly excludes `status` and `rejection_reason`. The only way to move a citizen from `PENDING` is the dedicated Approve/Reject actions below, which each fire an SMS (via `apps.notifications.services.send_sms`) and, if the citizen has a linked login, an in-app `Notification`.
+
+## Ward-scoped access
+
+`CitizenListView`, `CitizenDetailView`, and `CitizenUpdateView` all mix in `apps.accounts.mixins.WardScopedQuerysetMixin` (`ward_lookup = "ward"`): an `OFFICER` only ever sees/edits citizens in their own `User.ward`; `ADMIN`/superuser accounts see everyone.
+
+`CitizenApproveView` and `CitizenRejectView` are plain `View`s (they fetch by `pk` directly, not through `get_queryset()`), so they replicate the same restriction via a small `_guard_ward_access(request, citizen)` helper at the top of `views.py` — it raises `Http404` if a non-admin officer's ward doesn't match the citizen's ward.
 
 ## Views
 
@@ -38,8 +47,11 @@ PENDING (default on registration)
 | `CitizenHomeView` | `/` | Public — landing page with system stats |
 | `CitizenPortalView` | `/portal/` | CITIZEN only — shows own profile + their issues |
 | `CitizenRegistrationView` | `/register/` | Public — create a new citizen record |
-| `CitizenListView` | `/list/` | Staff — paginated list of all citizens |
-| `CitizenDetailView` | `/<pk>/` | Staff — full citizen profile |
+| `CitizenListView` | `/list/` | Staff — paginated list, ward-scoped for officers |
+| `CitizenDetailView` | `/<pk>/` | Staff — full citizen profile, ward-scoped for officers |
+| `CitizenUpdateView` | `/<pk>/edit/` | Staff — edit profile fields (not status), ward-scoped for officers |
+| `CitizenApproveView` | `/<pk>/approve/` (POST only) | Staff — sets `APPROVED`, sends SMS + notification |
+| `CitizenRejectView` | `/<pk>/reject/` (POST only, requires `reason`) | Staff — sets `REJECTED` + `rejection_reason`, sends SMS + notification |
 | `CitizenStatusView` | `/<pk>/status/` | Staff — status summary card |
 
 ## Management command: `seed`
@@ -54,12 +66,17 @@ python manage.py seed --flush      # wipe all seeded tables first, then re-seed
 ### What gets seeded
 
 1. Localities — 3 regions, 5 districts, 6 wards, 5 mitaa
-2. Users — admin, 2 officers, 1 citizen (all password: `test1234`)
-3. Citizens — 8 records across different wards and statuses
-4. Issues — 10 issues with varying priorities and statuses, plus 5 comments
-5. SMS templates — 5 Kiswahili templates; 7 SMS log entries
-6. Audit logs — 12 entries covering all action types
+2. Users — admin, 2 officers (each assigned a ward), 1 citizen (all password: `test1234`)
+3. Citizens — 9 records across different wards and statuses, including at least one `PENDING` citizen per officer's ward so Approve/Reject is demoable immediately
+4. Issues — 10 issues with varying priorities/statuses + comments
+5. One-Stop Centre demo data — a technician/appointment assigned on one issue, a 5-star rating + feedback on another
+6. SMS Templates & Logs — 5 Kiswahili templates, 7 SMS log entries, plus a staff-relayed inbound/outbound conversation thread on one issue
+7. Notifications — a handful of read/unread inbox entries for a citizen and an officer
+8. Audit logs — 12 entries covering all action types
 
-## Signals
+## Signals (`signals.py`)
 
-`signals.py` is present for post-save hooks (e.g. auto-sending an SMS on status change). Check the file for what is currently wired up.
+Two `post_save` receivers on `Citizen`, plus a `pre_save` receiver that stashes the previous status so the post-save hooks can detect a real transition:
+
+- **`log_citizen_save`** — writes a `reports.AuditLog` entry on every create/update (unchanged behaviour).
+- **`notify_citizen_status_change`** — when `status` transitions into `APPROVED` or `REJECTED` (and the citizen has a linked `user`), creates a `notifications.Notification` for that user. This is separate from — and in addition to — the SMS sent directly from `CitizenApproveView`/`CitizenRejectView`.

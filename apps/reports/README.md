@@ -47,8 +47,13 @@ Paginated (15 per page) list of all audit entries, newest first. Shows actor, ac
 
 ## Who writes audit logs?
 
-Currently audit entries are written manually in the seed command. To wire real-time audit logging:
+Real-time audit logging is already wired via `post_save` signals — this app doesn't create `AuditLog` rows itself, it's purely the read side (dashboard, reports, audit trail list).
 
-1. Add a post-save signal in each app's `signals.py`
-2. Or use a third-party package like `django-auditlog` or `django-simple-history`
-3. Call `AuditLog.objects.create(...)` from any view that changes data
+- `apps/citizens/signals.py::log_citizen_save` — logs every `Citizen` create/update
+- `apps/issues/signals.py::log_issue_save` — logs every `Issue` create/update
+
+Both use a lazy `apps.get_model("reports", "AuditLog")` lookup rather than a direct import, avoiding a circular dependency between `reports` and the apps it audits. The seed command also inserts a handful of illustrative entries so a fresh `seed --flush` has a populated Audit Trail page to demo immediately.
+
+To extend audit logging to another model, add the same `post_save` pattern to that app's `signals.py` (see either file above for the template) — do not call `AuditLog.objects.create(...)` directly from views; keep it signal-driven so it can't be bypassed by a new code path.
+
+Note: the same two signal files also create `notifications.Notification` rows on citizen approval/rejection and issue appointment/resolution — see `apps/notifications/README.md`. That's a separate concern from audit logging (user-facing notification vs. internal accountability trail), even though both are triggered from the same `post_save` receivers file.

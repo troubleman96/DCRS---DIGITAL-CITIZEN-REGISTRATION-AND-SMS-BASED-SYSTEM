@@ -24,6 +24,8 @@ Central configuration for the entire project. Key sections:
 | `STATIC_URL` / `STATICFILES_DIRS` | Served from `static/` in dev. |
 | `MEDIA_URL` / `MEDIA_ROOT` | User uploads stored in `media/`. |
 | `EMAIL_BACKEND` | Console backend in dev — emails print to terminal. |
+| `SENDAFRICA_BASE_URL` / `SENDAFRICA_API_KEY` / `SENDAFRICA_SENDER_ID` | Real SMS gateway config, read from env. Leave `SENDAFRICA_API_KEY` blank to use the internal simulator (default for dev). See `apps/notifications/README.md`. |
+| `TEMPLATES[0]["OPTIONS"]["context_processors"]` | Includes `apps.notifications.context_processors.notifications`, which injects `unread_notifications`/`unread_notifications_count` into every template for the bell-icon dropdown. |
 
 ### `urls.py`
 
@@ -31,15 +33,17 @@ Root URL dispatcher. Mounts each app's URL config:
 
 | Prefix | App |
 |---|---|
-| `""` | `citizens.urls` — home, register, list, detail, portal |
+| `""` | `citizens.urls` — home, register, list, detail, portal, approve/reject |
 | `"accounts/"` | `accounts.urls` — login, logout, OTP, password reset |
 | `"api/localities/"` | `localities.urls` — cascading dropdown API |
-| `"issues/"` | `issues.urls` — submit, list, detail, update |
-| `"portal/sms/"` | `notifications.urls` — compose, broadcast, log |
+| `"issues/"` | `issues.urls` — services centre, submit, list, detail, update, feedback |
+| `"portal/sms/"` | `notifications.urls` — compose, broadcast, log, log-incoming, delivery callback, notification inbox |
 | `"portal/reports/"` | `reports.urls` — dashboard, report, audit |
 | `"admin/"` | Django built-in admin site |
 
 In `DEBUG` mode, media files are also served via `django.conf.urls.static`.
+
+Note: `portal/sms/callback/` is a **public webhook endpoint** (CSRF-exempt, no login required) — it's how SendAfrica pushes delivery-status updates back into the app. Everything else under `portal/sms/` requires an authenticated session as normal.
 
 ### `wsgi.py`
 

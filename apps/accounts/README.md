@@ -52,3 +52,27 @@ LOGIN_REDIRECT_URL = "reports:dashboard"   # fallback; overridden per role in vi
 LOGOUT_REDIRECT_URL = "citizens:home"
 SESSION_COOKIE_AGE = 1800                  # 30-minute idle timeout
 ```
+
+## `mixins.py` — `WardScopedQuerysetMixin`
+
+The officer-locality access control used across `apps/citizens` and `apps/issues`:
+
+```python
+class WardScopedQuerysetMixin:
+    ward_lookup = "ward"
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.role != user.Role.OFFICER or user.is_superuser:
+            return qs
+        if user.ward_id:
+            return qs.filter(**{self.ward_lookup: user.ward_id})
+        return qs.none()
+```
+
+- Only `OFFICER` accounts are restricted — an officer only sees rows where `ward_id` matches their own `User.ward`.
+- `ADMIN` and superuser accounts bypass the filter entirely and see every record.
+- `CITIZEN` accounts are also left unfiltered here deliberately — citizens reach their own records through separate views/URLs (e.g. their status page), so this mixin isn't the access-control layer for them.
+- Any `ListView`/`DetailView`/`UpdateView` can opt in by mixing it in first (`class MyView(WardScopedQuerysetMixin, LoginRequiredMixin, ListView)`) and setting `ward_lookup` if the model's ward field isn't named `ward`.
+- Single-object action views that don't go through `get_queryset()` (e.g. `CitizenApproveView`, `CitizenRejectView`) replicate the same check manually via a small `_guard_ward_access()` helper in `apps/citizens/views.py` — see that app's README.
