@@ -2,20 +2,45 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+from django.views import View
+from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 
-from .forms import IssueCommentForm, IssueForm, IssueStatusForm
+from apps.accounts.mixins import WardScopedQuerysetMixin
+from apps.citizens.models import Citizen
+from apps.notifications.services import send_sms
+
+from .forms import IssueCommentForm, IssueFeedbackForm, IssueForm, IssueStatusForm
 from .models import Issue, IssueComment
 
 
-class IssueListView(LoginRequiredMixin, ListView):
+class ServiceCentreView(LoginRequiredMixin, TemplateView):
+    """One-Stop Emergency & Services Centre — 5 service tiles (slide 20)."""
+
+    template_name = "issues/service_centre.html"
+
+    SERVICES = [
+        {"category": "WATER", "label": "Water", "icon": "bi-droplet", "desc": "Pipe bursts, no supply, reconnection"},
+        {"category": "ELECTRICITY", "label": "Electricity", "icon": "bi-lightning-charge", "desc": "Outages, new connections, faults"},
+        {"category": "SANITATION", "label": "Waste", "icon": "bi-trash", "desc": "Uncollected garbage, pickup scheduling"},
+        {"category": "ROAD", "label": "Roads", "icon": "bi-signpost-split", "desc": "Potholes, flooding, road repairs"},
+        {"category": "SECURITY", "label": "Security", "icon": "bi-shield-exclamation", "desc": "Crime, suspicious activity, patrols"},
+    ]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["services"] = self.SERVICES
+        return context
+
+
+class IssueListView(WardScopedQuerysetMixin, LoginRequiredMixin, ListView):
     model = Issue
     template_name = "issues/issue_list.html"
     paginate_by = 10
     context_object_name = "issues"
+    ward_lookup = "ward"
 
     def get_queryset(self):
-        return Issue.objects.select_related("citizen", "ward", "assigned_officer").all()
+        return super().get_queryset().select_related("citizen", "ward", "assigned_officer").all()
 
 
 class IssueCreateView(LoginRequiredMixin, CreateView):
@@ -24,16 +49,43 @@ class IssueCreateView(LoginRequiredMixin, CreateView):
     template_name = "issues/issue_submit.html"
     success_url = reverse_lazy("issues:list")
 
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated and request.user.role == request.user.Role.CITIZEN:
+            try:
+                profile = request.user.citizen_profile
+            except Citizen.DoesNotExist:
+                profile = None
+            if not profile or profile.status != Citizen.Status.APPROVED:
+                messages.error(request, "Only approved citizens can file a service request.")
+                return redirect("citizens:portal")
+        return super().dispatch(request, *args, **kwargs)
 
-class IssueDetailView(LoginRequiredMixin, DetailView):
+    def get_initial(self):
+        initial = super().get_initial()
+        category = self.request.GET.get("category")
+        if category:
+            initial["category"] = category
+        if self.request.user.role == self.request.user.Role.CITIZEN:
+            try:
+                profile = self.request.user.citizen_profile
+                initial["citizen"] = profile.pk
+                initial["ward"] = profile.ward_id
+            except Citizen.DoesNotExist:
+                pass
+        return initial
+
+
+class IssueDetailView(WardScopedQuerysetMixin, LoginRequiredMixin, DetailView):
     model = Issue
     template_name = "issues/issue_detail.html"
     context_object_name = "issue"
+    ward_lookup = "ward"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["comment_form"] = IssueCommentForm()
         context["comments"] = self.object.comments.select_related("author").all()
+        context["sms_thread"] = self.object.sms_logs.order_by("created_at")
         return context
 
     def post(self, request, *args, **kwargs):
@@ -48,14 +100,56 @@ class IssueDetailView(LoginRequiredMixin, DetailView):
         return redirect("issues:detail", pk=self.object.pk)
 
 
-class IssueUpdateView(LoginRequiredMixin, UpdateView):
+class IssueUpdateView(WardScopedQuerysetMixin, LoginRequiredMixin, UpdateView):
     model = Issue
     form_class = IssueStatusForm
     template_name = "issues/issue_update.html"
+    ward_lookup = "ward"
+
+    def form_valid(self, form):
+        previous = Issue.objects.get(pk=self.object.pk)
+        response = super().form_valid(form)
+        issue = self.object
+
+        appointment_changed = (
+            issue.assigned_technician_name and issue.appointment_at
+            and (issue.assigned_technician_name != previous.assigned_technician_name
+                 or issue.appointment_at != previous.appointment_at)
+        )
+        if appointment_changed:
+            send_sms(
+                issue.citizen.phone_number,
+                f"Update on {issue.reference_no}: technician {issue.assigned_technician_name} is scheduled to "
+                f"visit on {issue.appointment_at.strftime('%d %b %Y, %H:%M')}.",
+            )
+
+        if issue.status == Issue.Status.RESOLVED and previous.status != Issue.Status.RESOLVED:
+            send_sms(
+                issue.citizen.phone_number,
+                f"Your request {issue.reference_no} has been resolved. Please rate the service in your DCRS portal.",
+            )
+
+        return response
 
     def get_success_url(self):
         messages.success(self.request, f"Issue {self.object.reference_no} updated.")
         return reverse_lazy("issues:detail", kwargs={"pk": self.object.pk})
+
+
+class IssueFeedbackView(LoginRequiredMixin, View):
+    """Lets the reporting citizen rate a RESOLVED issue once (slides 21, 23)."""
+
+    def post(self, request, pk):
+        issue = get_object_or_404(
+            Issue, pk=pk, citizen__user=request.user, status=Issue.Status.RESOLVED, rating__isnull=True
+        )
+        form = IssueFeedbackForm(request.POST, instance=issue)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Thanks for your feedback!")
+        else:
+            messages.error(request, "Please choose a rating between 1 and 5.")
+        return redirect("issues:detail", pk=issue.pk)
 
 
 class IssueDeleteView(LoginRequiredMixin, DeleteView):

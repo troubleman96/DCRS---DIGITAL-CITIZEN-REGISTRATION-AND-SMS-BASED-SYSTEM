@@ -56,7 +56,10 @@
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label">Status</label>
-              {{ form.status }}
+              <div>
+                <span class="badge status-{{ citizen.status }}">{{ citizen.get_status_display }}</span>
+                <div style="font-size:.75rem;color:var(--muted);margin-top:6px">Use Approve/Reject on the citizen's page to change status.</div>
+              </div>
             </div>
             <div class="col-md-8">
               <label class="form-label">Registration Notes</label>

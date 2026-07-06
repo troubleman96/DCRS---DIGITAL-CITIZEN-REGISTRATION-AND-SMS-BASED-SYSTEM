@@ -11,7 +11,7 @@ _SEL_LG  = {"class": "form-select form-select-lg"}
 class CitizenRegistrationForm(forms.ModelForm):
     class Meta:
         model = Citizen
-        exclude = ("citizen_id", "user", "status", "created_at", "updated_at")
+        exclude = ("citizen_id", "user", "status", "rejection_reason", "created_at", "updated_at")
         widgets = {
             "full_name":           forms.TextInput(attrs={**_CTRL_LG, "placeholder": "Full name"}),
             "national_id":         forms.TextInput(attrs={**_CTRL_LG, "placeholder": "National ID"}),
@@ -30,14 +30,13 @@ class CitizenRegistrationForm(forms.ModelForm):
 class CitizenEditForm(forms.ModelForm):
     class Meta:
         model = Citizen
-        exclude = ("citizen_id", "user", "created_at", "updated_at")
+        exclude = ("citizen_id", "user", "status", "rejection_reason", "created_at", "updated_at")
         widgets = {
             "full_name":           forms.TextInput(attrs=_CTRL),
             "national_id":         forms.TextInput(attrs=_CTRL),
             "phone_number":        forms.TextInput(attrs=_CTRL),
             "gender":              forms.Select(attrs=_SEL),
             "date_of_birth":       forms.DateInput(attrs={**_CTRL, "type": "date"}),
-            "status":              forms.Select(attrs=_SEL),
             "region":              forms.Select(attrs=_SEL),
             "district":            forms.Select(attrs=_SEL),
             "ward":                forms.Select(attrs=_SEL),

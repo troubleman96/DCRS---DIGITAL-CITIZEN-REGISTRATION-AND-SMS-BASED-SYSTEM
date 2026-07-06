@@ -15,7 +15,7 @@ from django.utils import timezone
 from apps.citizens.models import Citizen
 from apps.issues.models import Issue, IssueComment
 from apps.localities.models import District, Mtaa, Region, Ward
-from apps.notifications.models import SMSLog, SMSTemplate
+from apps.notifications.models import Notification, SMSLog, SMSTemplate
 from apps.reports.models import AuditLog
 
 User = get_user_model()
@@ -40,7 +40,9 @@ class Command(BaseCommand):
         citizens = self._seed_citizens(localities, users)
         issues = self._seed_issues(citizens, localities, users)
         self._seed_issue_comments(issues, users)
-        self._seed_sms(users)
+        self._seed_one_stop_demo_data(issues)
+        self._seed_sms(users, issues)
+        self._seed_notifications(users, issues)
         self._seed_audit_logs(users)
         self._print_summary()
 
@@ -48,6 +50,7 @@ class Command(BaseCommand):
     def _flush(self):
         self.stdout.write(self.style.WARNING("Flushing seeded data…"))
         AuditLog.objects.all().delete()
+        Notification.objects.all().delete()
         SMSLog.objects.all().delete()
         SMSTemplate.objects.all().delete()
         IssueComment.objects.all().delete()
@@ -64,7 +67,7 @@ class Command(BaseCommand):
 
     # ─────────────────────────────────────────────
     def _seed_localities(self):
-        self.stdout.write("1/6  Localities")
+        self.stdout.write("1/7  Localities")
 
         dar    = Region.objects.get_or_create(name="Dar es Salaam")[0]
         mwanza = Region.objects.get_or_create(name="Mwanza")[0]
@@ -101,7 +104,7 @@ class Command(BaseCommand):
 
     # ─────────────────────────────────────────────
     def _seed_users(self, loc):
-        self.stdout.write("2/6  Users")
+        self.stdout.write("2/7  Users")
 
         USERS = [
             dict(username="admin_user",         password="test1234",     role="ADMIN",
@@ -140,7 +143,7 @@ class Command(BaseCommand):
 
     # ─────────────────────────────────────────────
     def _seed_citizens(self, loc, users):
-        self.stdout.write("3/6  Citizens")
+        self.stdout.write("3/7  Citizens")
 
         CITIZENS_DATA = [
             ("Amina Hassan",     "CM-19950320-0001", "+255710001001", "FEMALE", date(1995,3,20),
@@ -159,6 +162,8 @@ class Command(BaseCommand):
              loc["mwanza"], loc["nyamagana"],  loc["ward_isamilo"],      loc["mtaa_e"], "SUSPENDED",None),
             ("Hassan Kigogo",    "CM-19870901-0008", "+255710001008", "MALE",   date(1987,9,1),
              loc["dar"],    loc["ilala"],      loc["ward_kariakoo"],     loc["mtaa_c"], "APPROVED", None),
+            ("Halima Ramadhani", "CM-19961115-0009", "+255710001009", "FEMALE", date(1996,11,15),
+             loc["dar"],    loc["kinondoni"],  loc["ward_mwananyamala"], loc["mtaa_a"], "PENDING",  None),
         ]
 
         result = []
@@ -178,7 +183,7 @@ class Command(BaseCommand):
 
     # ─────────────────────────────────────────────
     def _seed_issues(self, citizens, loc, users):
-        self.stdout.write("4/6  Issues")
+        self.stdout.write("4/7  Issues")
 
         o1 = users["officer_kinondoni"]
         o2 = users["officer_ilala"]
@@ -234,8 +239,26 @@ class Command(BaseCommand):
         self.stdout.write("   [+] Issue comments seeded")
 
     # ─────────────────────────────────────────────
-    def _seed_sms(self, users):
-        self.stdout.write("5/6  SMS Templates & Logs")
+    def _seed_one_stop_demo_data(self, issues):
+        """One-Stop Centre demo touches: technician/appointment on an in-progress issue,
+        rating/feedback on a resolved issue (slides 20-24)."""
+        appointment_issue = issues[0]  # Broken water pipe on Msimbazi Street — IN_PROGRESS
+        if not appointment_issue.assigned_technician_name:
+            appointment_issue.assigned_technician_name = "John Mwakasege"
+            appointment_issue.appointment_at = timezone.now() + timedelta(days=2)
+            appointment_issue.save()
+
+        rated_issue = issues[7]  # Water supply cut for 5 days — RESOLVED
+        if rated_issue.rating is None:
+            rated_issue.rating = 5
+            rated_issue.feedback_comment = "Fixed quickly, very satisfied with the response time."
+            rated_issue.save()
+
+        self.stdout.write("   [+] One-Stop Centre demo data (technician/appointment + rating)")
+
+    # ─────────────────────────────────────────────
+    def _seed_sms(self, users, issues):
+        self.stdout.write("5/7  SMS Templates & Logs")
 
         templates = [
             ("registration_approved", "Registration Approved",
@@ -271,9 +294,50 @@ class Command(BaseCommand):
             )
         self.stdout.write(f"   [+] {len(templates)} templates, {len(SMS_LOGS)} SMS logs")
 
+        # Staff-relayed two-way SMS thread demo (slide 22) — tied to the water pipe issue
+        appointment_issue = issues[0]
+        SMSLog.objects.get_or_create(
+            recipient=appointment_issue.citizen.phone_number,
+            message_body="The technician has not arrived yet, is he still coming today?",
+            defaults=dict(
+                status="SENT", provider="Staff-logged (phone)", direction="INBOUND",
+                issue=appointment_issue, logged_by=users["officer_kinondoni"],
+            ),
+        )
+        SMSLog.objects.get_or_create(
+            recipient=appointment_issue.citizen.phone_number,
+            message_body="Apologies for the delay — the technician is on the way and will arrive within the hour.",
+            defaults=dict(
+                status="SENT", provider="SendAfrica", direction="OUTBOUND",
+                issue=appointment_issue,
+                sent_at=timezone.now() - timedelta(hours=1, minutes=45),
+            ),
+        )
+        self.stdout.write("   [+] SMS conversation thread seeded")
+
+    # ─────────────────────────────────────────────
+    def _seed_notifications(self, users, issues):
+        self.stdout.write("6/7  Notifications")
+
+        citizen_user = users["citizen_user"]
+        officer1 = users["officer_kinondoni"]
+
+        NOTIFICATIONS = [
+            (citizen_user, "Your DCRS registration (CIT-001) has been approved.", None, True),
+            (citizen_user, f"Your request {issues[0].reference_no} has a technician scheduled.", issues[0], False),
+            (citizen_user, f"Your request {issues[7].reference_no} has been resolved. Please rate the service.", issues[7], False),
+            (officer1, "New citizen registration pending approval in your ward.", None, False),
+        ]
+        for recipient, message, related_issue, is_read in NOTIFICATIONS:
+            Notification.objects.get_or_create(
+                recipient=recipient, message=message,
+                defaults={"related_issue": related_issue, "is_read": is_read},
+            )
+        self.stdout.write(f"   [+] {len(NOTIFICATIONS)} notifications seeded")
+
     # ─────────────────────────────────────────────
     def _seed_audit_logs(self, users):
-        self.stdout.write("6/6  Audit Logs")
+        self.stdout.write("7/7  Audit Logs")
 
         admin   = users["admin_user"]
         officer1 = users["officer_kinondoni"]

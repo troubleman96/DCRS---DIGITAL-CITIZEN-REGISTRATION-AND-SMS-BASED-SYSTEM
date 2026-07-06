@@ -1,11 +1,30 @@
 from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
+
+from apps.accounts.mixins import WardScopedQuerysetMixin
+from apps.notifications.services import send_sms
 
 from .forms import CitizenEditForm, CitizenRegistrationForm
 from .models import Citizen
+
+
+def _guard_ward_access(request, citizen):
+    """404 a non-admin officer trying to act on a citizen outside their ward.
+
+    Mirrors WardScopedQuerysetMixin for the single-object action views (Approve/Reject) that
+    fetch by pk directly rather than through get_queryset().
+    """
+    user = request.user
+    if user.role != user.Role.OFFICER or user.is_superuser:
+        return
+    if not user.ward_id or user.ward_id != citizen.ward_id:
+        raise Http404
 
 
 class CitizenPortalView(LoginRequiredMixin, TemplateView):
@@ -55,20 +74,22 @@ class CitizenRegistrationView(CreateView):
     success_url = reverse_lazy("citizens:list")
 
 
-class CitizenListView(LoginRequiredMixin, ListView):
+class CitizenListView(WardScopedQuerysetMixin, LoginRequiredMixin, ListView):
     model = Citizen
     template_name = "citizens/citizen_list.html"
     paginate_by = 10
     context_object_name = "citizens"
+    ward_lookup = "ward"
 
     def get_queryset(self):
-        return Citizen.objects.select_related("region", "district", "ward", "mtaa").all()
+        return super().get_queryset().select_related("region", "district", "ward", "mtaa").all()
 
 
-class CitizenDetailView(LoginRequiredMixin, DetailView):
+class CitizenDetailView(WardScopedQuerysetMixin, LoginRequiredMixin, DetailView):
     model = Citizen
     template_name = "citizens/citizen_detail.html"
     context_object_name = "citizen"
+    ward_lookup = "ward"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -79,15 +100,52 @@ class CitizenDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class CitizenUpdateView(LoginRequiredMixin, UpdateView):
+class CitizenUpdateView(WardScopedQuerysetMixin, LoginRequiredMixin, UpdateView):
     model = Citizen
     form_class = CitizenEditForm
     template_name = "citizens/citizen_edit.html"
     context_object_name = "citizen"
+    ward_lookup = "ward"
 
     def get_success_url(self):
         messages.success(self.request, f"{self.object.full_name}'s profile has been updated.")
         return reverse_lazy("citizens:detail", kwargs={"pk": self.object.pk})
+
+
+class CitizenApproveView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        citizen = get_object_or_404(Citizen, pk=pk)
+        _guard_ward_access(request, citizen)
+        citizen.status = Citizen.Status.APPROVED
+        citizen.rejection_reason = ""
+        citizen.save()
+        send_sms(
+            citizen.phone_number,
+            f"Habari {citizen.full_name}, your DCRS registration ({citizen.citizen_id}) has been approved. "
+            "You can now log in to your citizen portal.",
+        )
+        messages.success(request, f"{citizen.full_name} has been approved.")
+        return redirect("citizens:detail", pk=citizen.pk)
+
+
+class CitizenRejectView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        citizen = get_object_or_404(Citizen, pk=pk)
+        _guard_ward_access(request, citizen)
+        reason = request.POST.get("reason", "").strip()
+        if not reason:
+            messages.error(request, "A rejection reason is required.")
+            return redirect("citizens:detail", pk=citizen.pk)
+        citizen.status = Citizen.Status.REJECTED
+        citizen.rejection_reason = reason
+        citizen.save()
+        send_sms(
+            citizen.phone_number,
+            f"Habari {citizen.full_name}, your DCRS registration ({citizen.citizen_id}) was not approved. "
+            f"Reason: {reason}",
+        )
+        messages.success(request, f"{citizen.full_name}'s registration has been rejected.")
+        return redirect("citizens:detail", pk=citizen.pk)
 
 
 class CitizenDeleteView(LoginRequiredMixin, DeleteView):

@@ -133,7 +133,23 @@
 
   {# ── Quick actions ── #}
   <div class="row g-3 mb-4">
-    <div class="col-md-6">
+    {% if profile.status == 'APPROVED' %}
+    <div class="col-md-4">
+      <a href="{% url 'issues:service_centre' %}" class="card" style="text-decoration:none;display:block;transition:box-shadow .15s,transform .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='var(--sh2)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div class="card-body" style="display:flex;align-items:center;gap:16px;padding:18px 20px !important">
+          <div class="stat-icon si-amber d-flex align-items-center justify-content-center" style="width:42px;height:42px;flex-shrink:0">
+            <i class="bi bi-grid-3x3-gap-fill"></i>
+          </div>
+          <div>
+            <div style="font-size:.88rem;font-weight:700;color:var(--text)">One-Stop Services Centre</div>
+            <div style="font-size:.76rem;color:var(--muted);margin-top:2px">Water, electricity, waste, roads & security — direct requests</div>
+          </div>
+          <i class="bi bi-arrow-right ms-auto" style="color:var(--accent);font-size:.9rem"></i>
+        </div>
+      </a>
+    </div>
+    {% endif %}
+    <div class="{% if profile %}col-md-4{% else %}col-md-6{% endif %}">
       <a href="{% url 'issues:submit' %}" class="card" style="text-decoration:none;display:block;transition:box-shadow .15s,transform .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='var(--sh2)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div class="card-body" style="display:flex;align-items:center;gap:16px;padding:18px 20px !important">
           <div class="stat-icon si-blue d-flex align-items-center justify-content-center" style="width:42px;height:42px;flex-shrink:0">
@@ -148,7 +164,7 @@
       </a>
     </div>
     {% if profile %}
-    <div class="col-md-6">
+    <div class="col-md-4">
       <a href="{% url 'citizens:status' profile.pk %}" class="card" style="text-decoration:none;display:block;transition:box-shadow .15s,transform .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='var(--sh2)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
         <div class="card-body" style="display:flex;align-items:center;gap:16px;padding:18px 20px !important">
           <div class="stat-icon si-green d-flex align-items-center justify-content-center" style="width:42px;height:42px;flex-shrink:0">

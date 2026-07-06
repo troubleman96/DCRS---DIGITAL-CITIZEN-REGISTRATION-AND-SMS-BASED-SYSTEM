@@ -57,6 +57,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.notifications.context_processors.notifications",
             ],
         },
     },
@@ -109,6 +110,12 @@ EMAIL_BACKEND = os.getenv(
     "django.core.mail.backends.console.EmailBackend",
 )
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@dcrs.local")
+
+# ── SMS (SendAfrica) ──────────────────────────────────────────────────────────
+# Leave SENDAFRICA_API_KEY blank to fall back to the internal simulator (dev).
+SENDAFRICA_BASE_URL = os.getenv("SENDAFRICA_BASE_URL", "https://api.sendafrica.online")
+SENDAFRICA_API_KEY = os.getenv("SENDAFRICA_API_KEY", "")
+SENDAFRICA_SENDER_ID = os.getenv("SENDAFRICA_SENDER_ID", "")
 
 # ── Auth & session ────────────────────────────────────────────────────────────
 AUTH_USER_MODEL = "accounts.User"

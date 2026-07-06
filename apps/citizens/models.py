@@ -38,6 +38,7 @@ class Citizen(models.Model):
     profile_photo = models.ImageField(upload_to="citizens/photos/", blank=True, null=True)
     registration_notes = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    rejection_reason = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

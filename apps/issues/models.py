@@ -1,16 +1,19 @@
 from uuid import uuid4
 
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
 class Issue(models.Model):
     class Category(models.TextChoices):
-        SANITATION = "SANITATION", "Sanitation"
-        ROAD = "ROAD", "Road"
+        # Labels match the One-Stop Services Centre tiles (Water/Electricity/Waste/Roads/Security).
         WATER = "WATER", "Water"
-        LIGHTING = "LIGHTING", "Lighting"
+        ELECTRICITY = "ELECTRICITY", "Electricity"
+        SANITATION = "SANITATION", "Waste"
+        ROAD = "ROAD", "Roads"
         SECURITY = "SECURITY", "Security"
+        LIGHTING = "LIGHTING", "Lighting"
         OTHER = "OTHER", "Other"
 
     class Priority(models.TextChoices):
@@ -44,6 +47,17 @@ class Issue(models.Model):
     internal_notes = models.TextField(blank=True)
     escalated_to_district = models.BooleanField(default=False)
     closed_at = models.DateTimeField(blank=True, null=True)
+
+    # One-Stop Services Centre — appointment/technician assignment (slide 21)
+    assigned_technician_name = models.CharField(max_length=120, blank=True)
+    appointment_at = models.DateTimeField(blank=True, null=True)
+
+    # Citizen feedback after resolution (slides 21, 23)
+    rating = models.PositiveSmallIntegerField(
+        blank=True, null=True, validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    feedback_comment = models.TextField(blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

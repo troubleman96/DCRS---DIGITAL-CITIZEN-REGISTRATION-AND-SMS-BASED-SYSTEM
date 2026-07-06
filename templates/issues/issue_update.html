@@ -36,6 +36,25 @@
       </div>
 
       <div class="card mb-3">
+        <div class="card-header"><span class="card-title"><i class="bi bi-tools me-1" style="color:var(--accent)"></i> Technician & Appointment</span></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Technician Name</label>
+              {{ form.assigned_technician_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Appointment Date/Time</label>
+              {{ form.appointment_at }}
+            </div>
+          </div>
+          <div style="margin-top:8px;font-size:.76rem;color:var(--muted)">
+            <i class="bi bi-info-circle me-1"></i> Setting or changing these sends the citizen an SMS with the appointment details.
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
         <div class="card-header"><span class="card-title"><i class="bi bi-lock me-1" style="color:var(--amber)"></i> Internal Notes</span></div>
         <div class="card-body">
           {{ form.internal_notes }}
@@ -92,6 +111,18 @@
           <span style="font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Citizen</span>
           <span style="font-size:.82rem;font-weight:600;color:var(--text)">{{ issue.citizen.full_name }}</span>
         </div>
+        {% if issue.assigned_technician_name %}
+        <div style="padding:11px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Technician</span>
+          <span style="font-size:.82rem;font-weight:600;color:var(--text)">{{ issue.assigned_technician_name }}</span>
+        </div>
+        {% endif %}
+        {% if issue.appointment_at %}
+        <div style="padding:11px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Appointment</span>
+          <span style="font-size:.82rem;font-weight:600;color:var(--text)">{{ issue.appointment_at|date:"d M Y, H:i" }}</span>
+        </div>
+        {% endif %}
         <div style="padding:11px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
           <span style="font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Opened</span>
           <span style="font-size:.78rem;color:var(--text)">{{ issue.created_at|date:"d M Y, H:i" }}</span>

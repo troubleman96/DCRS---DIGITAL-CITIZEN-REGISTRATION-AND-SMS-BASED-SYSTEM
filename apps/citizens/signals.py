@@ -1,8 +1,16 @@
 from django.apps import apps
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from .models import Citizen
+
+
+@receiver(pre_save, sender=Citizen)
+def stash_previous_status(sender, instance, **kwargs):
+    if instance.pk:
+        instance._previous_status = Citizen.objects.filter(pk=instance.pk).values_list("status", flat=True).first()
+    else:
+        instance._previous_status = None
 
 
 @receiver(post_save, sender=Citizen)
@@ -20,3 +28,25 @@ def log_citizen_save(sender, instance, created, **kwargs):
         summary=instance.full_name,
         metadata={"status": instance.status, "citizen_id": instance.citizen_id},
     )
+
+
+@receiver(post_save, sender=Citizen)
+def notify_citizen_status_change(sender, instance, created, **kwargs):
+    if created or not instance.user_id:
+        return
+    previous_status = getattr(instance, "_previous_status", None)
+    if previous_status == instance.status:
+        return
+    try:
+        Notification = apps.get_model("notifications", "Notification")
+    except LookupError:
+        return
+
+    if instance.status == Citizen.Status.APPROVED:
+        message = f"Your DCRS registration ({instance.citizen_id}) has been approved."
+    elif instance.status == Citizen.Status.REJECTED:
+        message = f"Your DCRS registration ({instance.citizen_id}) was rejected: {instance.rejection_reason}"
+    else:
+        return
+
+    Notification.objects.create(recipient_id=instance.user_id, message=message)
