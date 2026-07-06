@@ -46,13 +46,15 @@ Status is **not** editable through the generic edit form anymore — `CitizenEdi
 |---|---|---|
 | `CitizenHomeView` | `/` | Public — landing page with system stats |
 | `CitizenPortalView` | `/portal/` | CITIZEN only — shows own profile + their issues |
-| `CitizenRegistrationView` | `/register/` | Public — create a new citizen record |
+| `CitizenRegistrationView` | `/register/` | Public — create a new citizen record + linked login account, auto-logs in |
 | `CitizenListView` | `/list/` | Staff — paginated list, ward-scoped for officers |
 | `CitizenDetailView` | `/<pk>/` | Staff — full citizen profile, ward-scoped for officers |
 | `CitizenUpdateView` | `/<pk>/edit/` | Staff — edit profile fields (not status), ward-scoped for officers |
 | `CitizenApproveView` | `/<pk>/approve/` (POST only) | Staff — sets `APPROVED`, sends SMS + notification |
 | `CitizenRejectView` | `/<pk>/reject/` (POST only, requires `reason`) | Staff — sets `REJECTED` + `rejection_reason`, sends SMS + notification |
 | `CitizenStatusView` | `/<pk>/status/` | Staff — status summary card |
+
+`CitizenRegistrationForm` adds `password1`/`password2` fields (not model fields — validated via `django.contrib.auth.password_validation.validate_password` and a match check) on top of the `Citizen` fields. `CitizenRegistrationView.form_valid()` creates the `Citizen`, then creates a matching `User` (`role=CITIZEN`, `username=phone_number`, `national_id` copied from the citizen record so it's never blank/colliding), links `citizen.user`, and logs the new account in immediately via `django.contrib.auth.login()` — the citizen lands straight in `/portal/` and can track their (likely still-`PENDING`) status without a separate signup step.
 
 ## Management command: `seed`
 

@@ -55,6 +55,27 @@
 
       <div style="margin:8px 0;border-top:1px solid var(--border);padding-top:20px">
         <div style="font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:16px">
+          <i class="bi bi-shield-lock"></i> Login Details
+        </div>
+        <p style="font-size:.82rem;color:var(--muted);margin-top:-8px;margin-bottom:16px">
+          Your phone number above is your username — set a password so you can log in and track your registration.
+        </p>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            {{ form.password1 }}
+            {% if form.password1.errors %}<div class="form-error">{{ form.password1.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirm Password</label>
+            {{ form.password2 }}
+            {% if form.password2.errors %}<div class="form-error">{{ form.password2.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div style="margin:8px 0;border-top:1px solid var(--border);padding-top:20px">
+        <div style="font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:16px">
           <i class="bi bi-geo-alt"></i> Location
         </div>
         <div class="form-grid-2">
@@ -86,7 +107,7 @@
         <button class="btn btn-primary btn-lg" type="submit">
           <i class="bi bi-check-lg"></i> Save Registration
         </button>
-        <a class="btn btn-outline btn-lg" href="{% url 'citizens:list' %}">Cancel</a>
+        <a class="btn btn-outline btn-lg" href="{% url 'citizens:home' %}">Cancel</a>
       </div>
     </form>
   </div>

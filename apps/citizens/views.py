@@ -1,5 +1,7 @@
 from django.apps import apps
 from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.contrib.auth import login as auth_login
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
@@ -71,7 +73,31 @@ class CitizenRegistrationView(CreateView):
     model = Citizen
     form_class = CitizenRegistrationForm
     template_name = "citizens/register.html"
-    success_url = reverse_lazy("citizens:list")
+    success_url = reverse_lazy("citizens:portal")
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        citizen = self.object
+
+        User = get_user_model()
+        first_name, _, last_name = citizen.full_name.partition(" ")
+        user = User(
+            username=citizen.phone_number,
+            role=User.Role.CITIZEN,
+            phone_number=citizen.phone_number,
+            national_id=citizen.national_id,
+            first_name=first_name,
+            last_name=last_name,
+        )
+        user.set_password(form.cleaned_data["password2"])
+        user.save()
+
+        citizen.user = user
+        citizen.save(update_fields=["user"])
+
+        auth_login(self.request, user)
+        messages.success(self.request, "Registration submitted — you're logged in, and can track your approval status here.")
+        return response
 
 
 class CitizenListView(WardScopedQuerysetMixin, LoginRequiredMixin, ListView):
