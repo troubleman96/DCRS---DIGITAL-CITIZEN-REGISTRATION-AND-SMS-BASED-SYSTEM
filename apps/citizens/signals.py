@@ -3,6 +3,8 @@ from django.db import models
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
+from apps.notifications.services import send_sms
+
 from .models import Citizen
 
 
@@ -73,3 +75,13 @@ def notify_officers_of_new_registration(sender, instance, created, **kwargs):
     Notification.objects.bulk_create(
         [Notification(recipient=user, message=message, related_citizen=instance) for user in recipients]
     )
+
+    # SMS the ward's officer(s) directly — admins get the web notification only, to avoid
+    # mass-SMS-ing every admin account on every single registration.
+    for officer in recipients.filter(role=User.Role.OFFICER):
+        if officer.phone_number:
+            send_sms(
+                officer.phone_number,
+                f"DCRS: New citizen registration awaiting your approval — {instance.full_name} "
+                f"({instance.citizen_id}) in {instance.ward.name}.",
+            )

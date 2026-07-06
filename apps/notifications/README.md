@@ -73,7 +73,7 @@ The web notification inbox — bell icon, read/unread.
 | `is_read` | BooleanField | Toggled via the mark-read endpoints |
 | `created_at` | DateTimeField | |
 
-Created by signals in `apps/citizens/signals.py` and `apps/issues/signals.py` (see those apps' READMEs) — not created directly by this app. This includes an admin/ward-officer alert on every new citizen registration (`notify_officers_of_new_registration`), which is web-notification only — no SMS is sent for a new registration itself, only on the officer's subsequent Approve/Reject decision.
+Created by signals in `apps/citizens/signals.py` and `apps/issues/signals.py` (see those apps' READMEs) — not created directly by this app. This includes an admin/ward-officer alert on every new citizen registration (`notify_officers_of_new_registration`): the matching ward officer(s) get both the web notification **and** a real SMS to their own phone number; admins get the web notification only.
 
 ## Views
 
