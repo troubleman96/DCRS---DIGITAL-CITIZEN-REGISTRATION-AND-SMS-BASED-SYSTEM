@@ -1,4 +1,5 @@
 from django.apps import apps
+from django.db import models
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
@@ -50,3 +51,25 @@ def notify_citizen_status_change(sender, instance, created, **kwargs):
         return
 
     Notification.objects.create(recipient_id=instance.user_id, message=message)
+
+
+@receiver(post_save, sender=Citizen)
+def notify_officers_of_new_registration(sender, instance, created, **kwargs):
+    """Alert the ward's officers (and all admins) when a new citizen registers, so approvals
+    don't sit unnoticed."""
+    if not created:
+        return
+    try:
+        Notification = apps.get_model("notifications", "Notification")
+    except LookupError:
+        return
+
+    User = apps.get_model("accounts", "User")
+    recipients = User.objects.filter(
+        models.Q(role=User.Role.ADMIN) | models.Q(role=User.Role.OFFICER, ward=instance.ward)
+    ).distinct()
+
+    message = f"New citizen registration: {instance.full_name} ({instance.citizen_id}) in {instance.ward.name} — awaiting approval."
+    Notification.objects.bulk_create(
+        [Notification(recipient=user, message=message, related_citizen=instance) for user in recipients]
+    )

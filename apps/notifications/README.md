@@ -69,10 +69,11 @@ The web notification inbox — bell icon, read/unread.
 | `recipient` | ForeignKey → User | Who sees this in their bell dropdown/inbox |
 | `message` | CharField | The notification text |
 | `related_issue` | ForeignKey → Issue (nullable) | Deep-links the notification to an issue when relevant |
+| `related_citizen` | ForeignKey → Citizen (nullable) | Deep-links the notification to a citizen record (e.g. new registrations) |
 | `is_read` | BooleanField | Toggled via the mark-read endpoints |
 | `created_at` | DateTimeField | |
 
-Created by signals in `apps/citizens/signals.py` and `apps/issues/signals.py` (see those apps' READMEs) — not created directly by this app.
+Created by signals in `apps/citizens/signals.py` and `apps/issues/signals.py` (see those apps' READMEs) — not created directly by this app. This includes an admin/ward-officer alert on every new citizen registration (`notify_officers_of_new_registration`), which is web-notification only — no SMS is sent for a new registration itself, only on the officer's subsequent Approve/Reject decision.
 
 ## Views
 

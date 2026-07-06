@@ -59,7 +59,7 @@
             {% for n in unread_notifications %}
             <li>
               <a class="dropdown-item" style="white-space:normal;font-size:.8rem;line-height:1.5;padding:8px 16px"
-                 href="{% if n.related_issue %}{% url 'issues:detail' n.related_issue.pk %}{% else %}{% url 'notifications:inbox' %}{% endif %}">
+                 href="{% if n.related_issue %}{% url 'issues:detail' n.related_issue.pk %}{% elif n.related_citizen %}{% url 'citizens:detail' n.related_citizen.pk %}{% else %}{% url 'notifications:inbox' %}{% endif %}">
                 {{ n.message|truncatechars:80 }}
               </a>
             </li>

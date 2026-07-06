@@ -25,7 +25,7 @@
       {% for n in notifications %}
       <div style="padding:16px 0;border-bottom:1px solid var(--border);display:flex;align-items:start;gap:12px">
         <div class="stat-icon {% if n.is_read %}si-blue{% else %}si-amber{% endif %} d-flex align-items-center justify-content-center" style="width:34px;height:34px;flex-shrink:0;margin-top:2px">
-          <i class="bi {% if n.related_issue %}bi-exclamation-triangle-fill{% else %}bi-bell-fill{% endif %}"></i>
+          <i class="bi {% if n.related_issue %}bi-exclamation-triangle-fill{% elif n.related_citizen %}bi-person-fill{% else %}bi-bell-fill{% endif %}"></i>
         </div>
         <div style="flex:1;min-width:0">
           <p style="font-size:.87rem;color:var(--text2);margin:0;line-height:1.6">{{ n.message }}</p>
@@ -33,6 +33,8 @@
             <span>{{ n.created_at|date:"d M Y, H:i" }}</span>
             {% if n.related_issue %}
             <a href="{% url 'issues:detail' n.related_issue.pk %}" style="color:var(--accent);font-weight:600">View issue <i class="bi bi-arrow-right"></i></a>
+            {% elif n.related_citizen %}
+            <a href="{% url 'citizens:detail' n.related_citizen.pk %}" style="color:var(--accent);font-weight:600">View citizen <i class="bi bi-arrow-right"></i></a>
             {% endif %}
             {% if not n.is_read %}
             <form method="post" action="{% url 'notifications:mark_read' n.pk %}" style="margin:0">

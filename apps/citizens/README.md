@@ -76,7 +76,8 @@ python manage.py seed --flush      # wipe all seeded tables first, then re-seed
 
 ## Signals (`signals.py`)
 
-Two `post_save` receivers on `Citizen`, plus a `pre_save` receiver that stashes the previous status so the post-save hooks can detect a real transition:
+Three `post_save` receivers on `Citizen`, plus a `pre_save` receiver that stashes the previous status so the post-save hooks can detect a real transition:
 
 - **`log_citizen_save`** — writes a `reports.AuditLog` entry on every create/update (unchanged behaviour).
 - **`notify_citizen_status_change`** — when `status` transitions into `APPROVED` or `REJECTED` (and the citizen has a linked `user`), creates a `notifications.Notification` for that user. This is separate from — and in addition to — the SMS sent directly from `CitizenApproveView`/`CitizenRejectView`.
+- **`notify_officers_of_new_registration`** — on every new registration (`created=True`), notifies every `OFFICER` whose `ward` matches the citizen's ward, plus every `ADMIN`, so a new `PENDING` registration never sits unnoticed. No SMS is sent for this — it's web-notification only, deep-linked to the citizen's detail page via `Notification.related_citizen`.
