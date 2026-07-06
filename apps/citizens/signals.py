@@ -76,12 +76,12 @@ def notify_officers_of_new_registration(sender, instance, created, **kwargs):
         [Notification(recipient=user, message=message, related_citizen=instance) for user in recipients]
     )
 
-    # SMS the ward's officer(s) directly — admins get the web notification only, to avoid
-    # mass-SMS-ing every admin account on every single registration.
-    for officer in recipients.filter(role=User.Role.OFFICER):
-        if officer.phone_number:
+    # SMS everyone who can act on this — the ward's officer(s), and every admin (admins oversee
+    # every ward, not just one, so they're not ward-filtered).
+    for user in recipients:
+        if user.phone_number:
             send_sms(
-                officer.phone_number,
+                user.phone_number,
                 f"DCRS: New citizen registration awaiting your approval — {instance.full_name} "
                 f"({instance.citizen_id}) in {instance.ward.name}.",
             )
