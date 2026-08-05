@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Login — DCRS{% endblock %}
 
 {% block content %}
@@ -25,6 +26,8 @@
         <span class="auth-chip"><i class="bi bi-journal-check me-1"></i>Full audit trail</span>
       </div>
     </div>
+
+    <img class="auth-side-art" src="{% static 'img/auth-side.svg' %}" alt="" aria-hidden="true">
 
     <div class="auth-side-foot">Tanzania Local Government</div>
   </div>

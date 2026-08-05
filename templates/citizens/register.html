@@ -1,65 +1,89 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Register Citizen — DCRS{% endblock %}
-{% block page_title %}New Registration{% endblock %}
 
 {% block content %}
+<div class="auth-wrap auth-register">
 
-<div class="page-header">
-  <h2>Citizen Registration</h2>
-  <p>Capture identity, contact, and locality details for a new citizen.</p>
-</div>
+  <div class="auth-side">
+    <div class="auth-circle c1"></div>
+    <div class="auth-circle c2"></div>
 
-<div class="card" style="max-width:800px">
-  <div class="card-header">
-    <span class="card-title"><i class="bi bi-person-plus" style="color:var(--accent)"></i> Registration Form</span>
+    <div class="auth-side-brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div><div class="brand-name">DCRS</div><div class="brand-sub">District Citizen Response System</div></div>
+    </div>
+
+    <div class="auth-side-body">
+      <h2>Join your district's digital register</h2>
+      <p>Create your citizen account once — then track your approval status, report community issues, and receive SMS updates from your ward.</p>
+      <div class="auth-chips">
+        <span class="auth-chip"><i class="bi bi-check2-circle me-1"></i>Track approval status</span>
+        <span class="auth-chip"><i class="bi bi-megaphone me-1"></i>Report issues</span>
+        <span class="auth-chip"><i class="bi bi-chat-dots me-1"></i>SMS updates</span>
+        <span class="auth-chip"><i class="bi bi-shield-lock me-1"></i>Secure sign-in</span>
+      </div>
+    </div>
+
+    <img class="auth-side-art" src="{% static 'img/auth-side.svg' %}" alt="" aria-hidden="true">
+
+    <div class="auth-side-foot">Tanzania Local Government</div>
   </div>
-  <div class="card-body">
-    <form method="post" enctype="multipart/form-data" class="form-stack">
-      {% csrf_token %}
+
+  <div class="auth-form-side">
+    <div class="auth-corner-toggle">
+      <button class="btn-theme" data-theme-toggle title="Toggle theme"><i class="bi bi-moon"></i></button>
+    </div>
+
+    <div class="auth-inner auth-register-inner">
+      <h1 class="auth-form-title">New citizen registration</h1>
+      <p class="auth-form-sub">Your phone number becomes your username. Fill in your details below — it only takes a minute.</p>
+
       {% if form.non_field_errors %}
-        <div class="alert-form-error">
-          <i class="bi bi-exclamation-circle"></i>
-          {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+        <div class="auth-error">
+          <i class="bi bi-exclamation-circle-fill"></i>
+          {% for e in form.non_field_errors %}{{ e }}{% endfor %}
         </div>
       {% endif %}
 
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label class="form-label">Full Name</label>
-          {{ form.full_name }}
-          {% if form.full_name.errors %}<div class="form-error">{{ form.full_name.errors.0 }}</div>{% endif %}
-        </div>
-        <div class="form-group">
-          <label class="form-label">National ID</label>
-          {{ form.national_id }}
-          {% if form.national_id.errors %}<div class="form-error">{{ form.national_id.errors.0 }}</div>{% endif %}
-        </div>
-        <div class="form-group">
-          <label class="form-label">Phone Number</label>
-          {{ form.phone_number }}
-          {% if form.phone_number.errors %}<div class="form-error">{{ form.phone_number.errors.0 }}</div>{% endif %}
-        </div>
-        <div class="form-group">
-          <label class="form-label">Gender</label>
-          {{ form.gender }}
-        </div>
-        <div class="form-group">
-          <label class="form-label">Date of Birth</label>
-          {{ form.date_of_birth }}
-        </div>
-        <div class="form-group">
-          <label class="form-label">Profile Photo <span style="color:var(--muted);font-weight:400">(optional)</span></label>
-          {{ form.profile_photo }}
-        </div>
-      </div>
+      <form method="post" enctype="multipart/form-data" class="form-stack">
+        {% csrf_token %}
 
-      <div style="margin:8px 0;border-top:1px solid var(--border);padding-top:20px">
-        <div style="font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:16px">
-          <i class="bi bi-shield-lock"></i> Login Details
+        <div class="auth-sec-title"><i class="bi bi-person"></i> Personal Details</div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            {{ form.full_name }}
+            {% if form.full_name.errors %}<div class="form-error">{{ form.full_name.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">National ID</label>
+            {{ form.national_id }}
+            {% if form.national_id.errors %}<div class="form-error">{{ form.national_id.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            {{ form.phone_number }}
+            {% if form.phone_number.errors %}<div class="form-error">{{ form.phone_number.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gender</label>
+            {{ form.gender }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date of Birth</label>
+            {{ form.date_of_birth }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Profile Photo <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+            {{ form.profile_photo }}
+          </div>
         </div>
-        <p style="font-size:.82rem;color:var(--muted);margin-top:-8px;margin-bottom:16px">
-          Your phone number above is your username — set a password so you can log in and track your registration.
-        </p>
+
+        <div class="auth-sec-title"><i class="bi bi-shield-lock"></i> Login Details</div>
+        <p class="auth-sec-note">Your phone number above is your username — set a password so you can log in and track your registration.</p>
         <div class="form-grid-2">
           <div class="form-group">
             <label class="form-label">Password</label>
@@ -72,12 +96,8 @@
             {% if form.password2.errors %}<div class="form-error">{{ form.password2.errors.0 }}</div>{% endif %}
           </div>
         </div>
-      </div>
 
-      <div style="margin:8px 0;border-top:1px solid var(--border);padding-top:20px">
-        <div style="font-size:0.82rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:16px">
-          <i class="bi bi-geo-alt"></i> Location
-        </div>
+        <div class="auth-sec-title"><i class="bi bi-geo-alt"></i> Location</div>
         <div class="form-grid-2">
           <div class="form-group">
             <label class="form-label">Region</label>
@@ -96,21 +116,25 @@
             {{ form.mtaa }}
           </div>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label class="form-label">Registration Notes <span style="color:var(--muted);font-weight:400">(optional)</span></label>
-        {{ form.registration_notes }}
-      </div>
+        <div class="form-group">
+          <label class="form-label">Registration Notes <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+          {{ form.registration_notes }}
+        </div>
 
-      <div style="display:flex;gap:10px;padding-top:8px">
-        <button class="btn btn-primary btn-lg" type="submit">
-          <i class="bi bi-check-lg"></i> Save Registration
-        </button>
-        <a class="btn btn-outline btn-lg" href="{% url 'citizens:home' %}">Cancel</a>
+        <div style="display:flex;gap:10px;padding-top:8px">
+          <button class="btn btn-primary btn-lg" type="submit">
+            <i class="bi bi-check-lg"></i> Save Registration
+          </button>
+          <a class="btn btn-outline btn-lg" href="{% url 'citizens:home' %}">Cancel</a>
+        </div>
+      </form>
+
+      <div class="auth-back">
+        Already registered? <a href="{% url 'accounts:login' %}">Sign in here</a>
       </div>
-    </form>
+    </div>
   </div>
-</div>
 
+</div>
 {% endblock %}

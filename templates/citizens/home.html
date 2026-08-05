@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}DCRS — District Citizen Response System{% endblock %}
 
 {% block content %}
@@ -46,6 +47,53 @@
   </div>
 </section>
 
+<section class="lp-problems">
+  <div class="lp-container">
+    <div class="sec-head">
+      <span class="sec-eyebrow">Real problems, real response</span>
+      <h2>Community issues we help resolve</h2>
+      <p>Every day, wards across the district report the issues that matter most. DCRS routes them to the right officers and tracks them until they are fixed.</p>
+    </div>
+    <div class="prob-grid">
+      <div class="prob-card">
+        <div class="prob-img-wrap">
+          <img class="prob-img" src="{% static 'img/issue-water.svg' %}" alt="Water supply disruption">
+          <span class="prob-tag t-water"><i class="bi bi-droplet-fill"></i> Utilities</span>
+        </div>
+        <div class="prob-body">
+          <h3>Water supply disruptions</h3>
+          <p>Broken mains, low pressure and outages leave neighbourhoods without clean water. Report them once — the district pipes the repair straight to the responsible unit.</p>
+          <a class="prob-link" href="{% url 'issues:submit' %}">Report a water issue <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <div class="prob-card">
+        <div class="prob-img-wrap">
+          <img class="prob-img" src="{% static 'img/issue-road.svg' %}" alt="Road potholes and infrastructure damage">
+          <span class="prob-tag t-road"><i class="bi bi-cone-striped"></i> Infrastructure</span>
+        </div>
+        <div class="prob-body">
+          <h3>Roads &amp; pothole damage</h3>
+          <p>Damaged roads slow traffic and damage vehicles. With photos, location and priority, ward officers can escalate critical stretches for urgent repairs.</p>
+          <a class="prob-link" href="{% url 'issues:submit' %}">Report a road issue <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <div class="prob-card">
+        <div class="prob-img-wrap">
+          <img class="prob-img" src="{% static 'img/issue-garbage.svg' %}" alt="Garbage collection and waste management">
+          <span class="prob-tag t-garbage"><i class="bi bi-recycle"></i> Sanitation</span>
+        </div>
+        <div class="prob-body">
+          <h3>Garbage &amp; waste collection</h3>
+          <p>Missed pick-ups and overflowing bins threaten public health. Log the complaint and SMS alerts notify the collection team until the ward is clean.</p>
+          <a class="prob-link" href="{% url 'issues:submit' %}">Report a waste issue <i class="bi bi-arrow-right"></i></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="lp-features">
   <div class="lp-container">
     <div class="sec-head">
@@ -67,11 +115,11 @@
   <div class="lp-container">
     <div class="d-flex align-items-center justify-content-between mb-4">
       <div>
-        <h2 style="font-size:1.2rem;font-weight:800;letter-spacing:-.02em;margin:0;color:var(--text)">Recent Registrations</h2>
-        <p style="font-size:.8rem;color:var(--muted);margin:3px 0 0">Latest citizens added to the system</p>
+        <h2 style="font-size:1.5rem;font-weight:800;letter-spacing:-.02em;margin:0;color:var(--text)">Recent Registrations</h2>
+        <p style="font-size:.9rem;color:var(--muted);margin:4px 0 0">Latest citizens added to the system</p>
       </div>
-      <a href="{% url 'citizens:list' %}" style="font-size:.8rem;font-weight:600;color:var(--accent);display:inline-flex;align-items:center;gap:5px">
-        View all <i class="bi bi-arrow-right" style="font-size:.75rem"></i>
+      <a href="{% url 'citizens:list' %}" style="font-size:.88rem;font-weight:600;color:var(--accent);display:inline-flex;align-items:center;gap:6px">
+        View all <i class="bi bi-arrow-right" style="font-size:.8rem"></i>
       </a>
     </div>
     <div class="row g-3">
