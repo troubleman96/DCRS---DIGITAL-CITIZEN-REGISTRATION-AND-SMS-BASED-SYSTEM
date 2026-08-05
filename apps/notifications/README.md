@@ -36,16 +36,17 @@ SendAfrica accepts Tanzania numbers in `07XXXXXXXX`, `+2557XXXXXXXX`, or `2557XX
 
 ## Where SMS fires
 
-Every meaningful state change in the app texts the right person automatically — the goal is that no party is ever left guessing.
+Every meaningful state change in the app texts the right person automatically — the goal is that no party is ever left guessing. Citizen- and issue-flow SMS are signal-driven (`apps/citizens/signals.py`, `apps/issues/signals.py`), so they fire no matter where the change is made — the portal approve/reject/update views **or the Django admin** — and are never duplicated in the views themselves.
 
 | Event | Trigger | Receiver |
 |---|---|---|
 | New citizen registration | `apps/citizens/signals.py` (`notify_officers_of_new_registration`) | Ward officer(s) + every admin |
-| Registration approved / rejected | `apps/citizens/views.py` (`CitizenApproveView` / `CitizenRejectView`) | The citizen |
-| Issue submitted | `apps/issues/views.py` (`IssueCreateView.form_valid`) | The citizen (confirmation) |
-| Status change (OPEN/IN_PROGRESS/ESCALATED/RESOLVED/CLOSED) | `apps/issues/views.py` (`IssueUpdateView.form_valid`) | The citizen |
-| Officer assigned | `IssueUpdateView.form_valid` | The citizen |
-| Technician appointment set/changed | `IssueUpdateView.form_valid` | The citizen |
+| Citizen registers (confirmation) | `apps/citizens/signals.py` (`notify_citizen_status_change`, created) | The citizen |
+| Registration approved / rejected | `apps/citizens/signals.py` (`notify_citizen_status_change`) | The citizen |
+| Issue submitted | `apps/issues/signals.py` (`notify_issue_progress`, created) | The citizen (confirmation) |
+| Status change (OPEN/IN_PROGRESS/ESCALATED/RESOLVED/CLOSED) | `apps/issues/signals.py` (`notify_issue_progress`) | The citizen |
+| Officer assigned | `apps/issues/signals.py` (`notify_issue_progress`) | The citizen |
+| Technician appointment set/changed | `apps/issues/signals.py` (`notify_issue_progress`) | The citizen |
 | Staff posts a public comment | `apps/issues/views.py` (`IssueDetailView.post`) | The citizen |
 | Citizen rates a resolved issue | `IssueFeedbackView.post` | The citizen (thank-you) |
 | Staff Compose / Broadcast | `ComposeSMSView` / `BroadcastSMSView` | The chosen recipient(s) |

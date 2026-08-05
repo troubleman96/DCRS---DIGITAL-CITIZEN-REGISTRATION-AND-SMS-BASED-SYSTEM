@@ -10,7 +10,6 @@ from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView
 
 from apps.accounts.mixins import WardScopedQuerysetMixin
-from apps.notifications.services import send_sms
 
 from .forms import CitizenEditForm, CitizenRegistrationForm
 from .models import Citizen
@@ -145,11 +144,6 @@ class CitizenApproveView(LoginRequiredMixin, View):
         citizen.status = Citizen.Status.APPROVED
         citizen.rejection_reason = ""
         citizen.save()
-        send_sms(
-            citizen.phone_number,
-            f"Habari {citizen.full_name}, your DCRS registration ({citizen.citizen_id}) has been approved. "
-            "You can now log in to your citizen portal.",
-        )
         messages.success(request, f"{citizen.full_name} has been approved.")
         return redirect("citizens:detail", pk=citizen.pk)
 
@@ -165,11 +159,6 @@ class CitizenRejectView(LoginRequiredMixin, View):
         citizen.status = Citizen.Status.REJECTED
         citizen.rejection_reason = reason
         citizen.save()
-        send_sms(
-            citizen.phone_number,
-            f"Habari {citizen.full_name}, your DCRS registration ({citizen.citizen_id}) was not approved. "
-            f"Reason: {reason}",
-        )
         messages.success(request, f"{citizen.full_name}'s registration has been rejected.")
         return redirect("citizens:detail", pk=citizen.pk)
 

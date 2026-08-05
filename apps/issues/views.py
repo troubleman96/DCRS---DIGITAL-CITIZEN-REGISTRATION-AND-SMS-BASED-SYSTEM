@@ -74,14 +74,6 @@ class IssueCreateView(LoginRequiredMixin, CreateView):
                 pass
         return initial
 
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        send_issue_update_sms(
-            self.object,
-            "Your request has been received and is now awaiting a ward officer.",
-        )
-        return response
-
 
 class IssueDetailView(WardScopedQuerysetMixin, LoginRequiredMixin, DetailView):
     model = Issue
@@ -115,42 +107,6 @@ class IssueUpdateView(WardScopedQuerysetMixin, LoginRequiredMixin, UpdateView):
     form_class = IssueStatusForm
     template_name = "issues/issue_update.html"
     ward_lookup = "ward"
-
-    def form_valid(self, form):
-        previous = Issue.objects.get(pk=self.object.pk)
-        response = super().form_valid(form)
-        issue = self.object
-
-        # SMS the citizen whenever the status moves, so they're never left guessing.
-        if issue.status != previous.status:
-            if issue.status == Issue.Status.OPEN:
-                send_issue_update_sms(issue, "Your request has been reopened. Please check your DCRS portal for updates.")
-            elif issue.status == Issue.Status.IN_PROGRESS:
-                send_issue_update_sms(issue, "Your request is now being handled by the ward office.")
-            elif issue.status == Issue.Status.ESCALATED:
-                send_issue_update_sms(issue, "Your request has been escalated to district level for priority action.")
-            elif issue.status == Issue.Status.RESOLVED:
-                send_issue_update_sms(issue, "Your request has been resolved. Please rate your experience in your DCRS portal.")
-            elif issue.status == Issue.Status.CLOSED:
-                send_issue_update_sms(issue, "Your request has been closed.")
-
-        if issue.assigned_officer_id and issue.assigned_officer_id != previous.assigned_officer_id:
-            name = issue.assigned_officer.get_full_name() or issue.assigned_officer.username
-            send_issue_update_sms(issue, f"Officer {name} has been assigned to your request.")
-
-        appointment_changed = (
-            issue.assigned_technician_name and issue.appointment_at
-            and (issue.assigned_technician_name != previous.assigned_technician_name
-                 or issue.appointment_at != previous.appointment_at)
-        )
-        if appointment_changed:
-            send_issue_update_sms(
-                issue,
-                f"Technician {issue.assigned_technician_name} is scheduled to visit on "
-                f"{issue.appointment_at.strftime('%d %b %Y, %H:%M')}.",
-            )
-
-        return response
 
     def get_success_url(self):
         messages.success(self.request, f"Issue {self.object.reference_no} updated.")

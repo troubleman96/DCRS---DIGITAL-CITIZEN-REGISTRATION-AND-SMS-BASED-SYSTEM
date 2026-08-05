@@ -35,24 +35,50 @@ def log_citizen_save(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Citizen)
 def notify_citizen_status_change(sender, instance, created, **kwargs):
-    if created or not instance.user_id:
-        return
-    previous_status = getattr(instance, "_previous_status", None)
-    if previous_status == instance.status:
-        return
+    """SMS + web notification for registration, approval, and rejection.
+
+    Signal-driven so the citizen is always texted no matter where the change is made —
+    the custom approve/reject views, the Django admin, or bulk updates.
+    """
     try:
         Notification = apps.get_model("notifications", "Notification")
     except LookupError:
+        Notification = None
+
+    if created:
+        if instance.phone_number:
+            send_sms(
+                instance.phone_number,
+                f"Habari {instance.full_name}, your DCRS registration ({instance.citizen_id}) "
+                "has been received and is now awaiting approval by the ward office.",
+            )
+        return
+
+    previous_status = getattr(instance, "_previous_status", None)
+    if previous_status == instance.status:
         return
 
     if instance.status == Citizen.Status.APPROVED:
-        message = f"Your DCRS registration ({instance.citizen_id}) has been approved."
+        sms_message = (
+            f"Habari {instance.full_name}, your DCRS registration ({instance.citizen_id}) "
+            "has been approved. You can now log in to your citizen portal."
+        )
+        inbox_message = f"Your DCRS registration ({instance.citizen_id}) has been approved."
     elif instance.status == Citizen.Status.REJECTED:
-        message = f"Your DCRS registration ({instance.citizen_id}) was rejected: {instance.rejection_reason}"
+        sms_message = (
+            f"Habari {instance.full_name}, your DCRS registration ({instance.citizen_id}) "
+            f"was not approved. Reason: {instance.rejection_reason}"
+        )
+        inbox_message = (
+            f"Your DCRS registration ({instance.citizen_id}) was rejected: {instance.rejection_reason}"
+        )
     else:
         return
 
-    Notification.objects.create(recipient_id=instance.user_id, message=message)
+    if instance.phone_number:
+        send_sms(instance.phone_number, sms_message)
+    if Notification is not None and instance.user_id:
+        Notification.objects.create(recipient_id=instance.user_id, message=inbox_message)
 
 
 @receiver(post_save, sender=Citizen)
