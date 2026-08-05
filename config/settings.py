@@ -125,5 +125,26 @@ LOGOUT_REDIRECT_URL = "citizens:home"
 SESSION_COOKIE_AGE = 1800
 SESSION_SAVE_EVERY_REQUEST = True
 
+# ── CSRF & secure cookies ─────────────────────────────────────────────────────
+# Django sits behind nginx + HTTPS in production (see DEPLOY.md). nginx forwards
+# the original scheme via X-Forwarded-Proto, so tell Django to trust it; otherwise
+# admin/forms see "http" and CSRF origin checks fail on the HTTPS site.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Set in .env in production, e.g.:
+#   CSRF_TRUSTED_ORIGINS=https://dcrs.simamia.online,https://www.dcrs.simamia.online
+_raw_csrf_origins = os.getenv("CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _raw_csrf_origins.split(",") if o.strip()]
+
+# Enable these in .env once served over HTTPS (never on plain-HTTP local dev):
+#   CSRF_COOKIE_SECURE=True SESSION_COOKIE_SECURE=True SECURE_SSL_REDIRECT=True
+CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", "False") == "True"
+CSRF_COOKIE_HTTPONLY = os.getenv("CSRF_COOKIE_HTTPONLY", "False") == "True"
+CSRF_COOKIE_SAMESITE = os.getenv("CSRF_COOKIE_SAMESITE", "Lax")
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False") == "True"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
+SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "False") == "True"
+
 # ── Misc ──────────────────────────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
