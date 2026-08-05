@@ -1,8 +1,238 @@
 {% extends 'base.html' %}
 {% block title %}{{ issue.title }} — DCRS{% endblock %}
-{% block page_title %}Issue Detail{% endblock %}
 
 {% block content %}
+
+{% if user.role == 'CITIZEN' %}
+{# ══════════════════════════════════════════════════════════════ #}
+{# ── CITIZEN VIEW — clean, friendly, progress-focused ─────────── #}
+{# ══════════════════════════════════════════════════════════════ #}
+<div style="max-width:940px;margin:0 auto;padding:28px 20px">
+
+  {# Header #}
+  <div class="issue-hero mb-4">
+    <div style="flex:1;min-width:0">
+      <div class="issue-cat">
+        <span class="issue-cat-icon">
+          {% if issue.category == 'WATER' %}<i class="bi bi-droplet"></i>
+          {% elif issue.category == 'ELECTRICITY' %}<i class="bi bi-lightning-charge"></i>
+          {% elif issue.category == 'SANITATION' %}<i class="bi bi-trash"></i>
+          {% elif issue.category == 'ROAD' %}<i class="bi bi-signpost-split"></i>
+          {% elif issue.category == 'SECURITY' %}<i class="bi bi-shield-exclamation"></i>
+          {% elif issue.category == 'LIGHTING' %}<i class="bi bi-lightbulb"></i>
+          {% else %}<i class="bi bi-patch-question"></i>{% endif %}
+        </span>
+        {{ issue.get_category_display }}
+      </div>
+      <h1 class="issue-title">{{ issue.title }}</h1>
+      <div class="issue-meta">
+        <span class="issue-ref">{{ issue.reference_no }}</span>
+        <span class="badge priority-{{ issue.priority }}" style="font-size:.76rem;padding:4px 11px">{{ issue.get_priority_display }} priority</span>
+        <span class="badge status-{{ issue.status }}" style="font-size:.76rem;padding:4px 11px">{{ issue.get_status_display }}</span>
+      </div>
+    </div>
+    <a class="btn btn-outline btn-sm" href="{% url 'citizens:portal' %}">
+      <i class="bi bi-arrow-left"></i> Back
+    </a>
+  </div>
+
+  {# Progress stepper #}
+  <div class="card mb-4">
+    <div class="card-body" style="padding:24px 20px !important">
+      <div class="issue-stepper">
+        <div class="st-step {% if issue.status != 'OPEN' %}st-done{% else %}st-active{% endif %}">
+          <div class="st-dot"><i class="bi bi-megaphone"></i></div>
+          <div class="st-label">Reported</div>
+          <div class="st-sub">{{ issue.created_at|date:"d M Y" }}</div>
+        </div>
+        <div class="st-line {% if issue.status in 'IN_PROGRESS ESCALATED RESOLVED CLOSED' %}st-done{% endif %}"></div>
+        <div class="st-step {% if issue.status in 'RESOLVED CLOSED' %}st-done{% elif issue.status in 'IN_PROGRESS ESCALATED' %}st-active{% endif %}">
+          <div class="st-dot"><i class="bi bi-wrench-adjustable"></i></div>
+          <div class="st-label">{% if issue.status == 'ESCALATED' %}Escalated{% else %}In progress{% endif %}</div>
+          <div class="st-sub">{% if issue.assigned_technician_name %}Technician assigned{% else %}Ward officers working{% endif %}</div>
+        </div>
+        <div class="st-line {% if issue.status in 'RESOLVED CLOSED' %}st-done{% endif %}"></div>
+        <div class="st-step {% if issue.status in 'RESOLVED CLOSED' %}st-active{% endif %}">
+          <div class="st-dot"><i class="bi bi-check2-circle"></i></div>
+          <div class="st-label">Resolved</div>
+          <div class="st-sub">{% if issue.closed_at %}{{ issue.closed_at|date:"d M Y" }}{% else %}Awaiting resolution{% endif %}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Escalation callout #}
+  {% if issue.escalated_to_district %}
+  <div class="issue-note ne">
+    <i class="bi bi-arrow-up-circle-fill" style="font-size:1.05rem;margin-top:1px"></i>
+    <div>This request has been escalated to the <strong>district level</strong> for priority attention.</div>
+  </div>
+  {% endif %}
+
+  {# Two-column body #}
+  <div class="row g-4">
+    <div class="col-lg-7">
+
+      {# Description #}
+      <div class="card mb-3">
+        <div class="card-header"><span class="card-title"><i class="bi bi-file-text me-1" style="color:var(--accent)"></i> What's the problem</span></div>
+        <div class="card-body">
+          <p class="issue-desc">{{ issue.description }}</p>
+        </div>
+      </div>
+
+      {# Comments #}
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i class="bi bi-chat-left-text me-1" style="color:var(--accent)"></i> Updates &amp; Comments</span>
+          <span class="badge badge-gray">{{ comments|length }}</span>
+        </div>
+
+        <div style="padding:0 20px">
+          {% for comment in comments %}
+          <div style="padding:14px 0;border-bottom:1px solid var(--border);display:flex;gap:12px">
+            <div style="width:34px;height:34px;border-radius:50%;background:var(--accent-tint);border:1px solid var(--accent-xdim);display:flex;align-items:center;justify-content:center;font-size:.74rem;font-weight:800;color:var(--accent);flex-shrink:0;margin-top:2px">
+              {{ comment.author.get_full_name|default:comment.author.username|slice:":1"|upper }}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
+                <span style="font-size:.85rem;font-weight:700;color:var(--text)">{{ comment.author.get_full_name|default:comment.author.username }}</span>
+                <span style="font-size:.74rem;color:var(--muted)">{{ comment.created_at|date:"d M Y, H:i" }}</span>
+              </div>
+              <p style="font-size:.9rem;color:var(--text2);margin:0;line-height:1.65">{{ comment.body }}</p>
+            </div>
+          </div>
+          {% empty %}
+          <div style="padding:34px 0;text-align:center;color:var(--muted);font-size:.85rem">
+            <i class="bi bi-chat-left" style="font-size:1.5rem;display:block;margin-bottom:8px;opacity:.35"></i>
+            No updates yet — your ward officer will post progress here.
+          </div>
+          {% endfor %}
+        </div>
+
+        <div style="padding:16px 20px;border-top:1px solid var(--border);background:var(--surface2);border-radius:0 0 var(--r3) var(--r3)">
+          <form method="post">
+            {% csrf_token %}
+            <div style="margin-bottom:10px">{{ comment_form.body }}</div>
+            <div style="display:flex;align-items:center;justify-content:flex-end">
+              <button type="submit" class="btn btn-primary btn-sm">
+                <i class="bi bi-send me-1"></i> Post Comment
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col-lg-5">
+
+      {# Where things stand #}
+      <div class="card mb-3">
+        <div class="card-header"><span class="card-title"><i class="bi bi-clipboard-check me-1" style="color:var(--accent)"></i> Where things stand</span></div>
+        <div class="card-body" style="padding:6px 18px !important">
+          <div class="upd-row">
+            <div class="upd-ic {% if issue.assigned_officer %}si-green{% else %}si-amber{% endif %} d-flex align-items-center justify-content-center">
+              <i class="bi {% if issue.assigned_officer %}bi-person-check-fill{% else %}bi-hourglass-split{% endif %}"></i>
+            </div>
+            <div class="upd-tx">
+              <div class="upd-tl">{% if issue.assigned_officer %}Being handled{% else %}Not yet assigned{% endif %}</div>
+              <div class="upd-ts">{% if issue.assigned_officer %}Officer {{ issue.assigned_officer.get_full_name|default:issue.assigned_officer.username }}{% else %}Your ward office will pick this up shortly{% endif %}</div>
+            </div>
+          </div>
+          {% if issue.assigned_technician_name %}
+          <div class="upd-row">
+            <div class="upd-ic si-blue d-flex align-items-center justify-content-center"><i class="bi bi-tools"></i></div>
+            <div class="upd-tx">
+              <div class="upd-tl">Technician assigned</div>
+              <div class="upd-ts">{{ issue.assigned_technician_name }}{% if issue.appointment_at %} · visit {{ issue.appointment_at|date:"d M Y, H:i" }}{% endif %}</div>
+            </div>
+          </div>
+          {% endif %}
+          <div class="upd-row">
+            <div class="upd-ic si-blue d-flex align-items-center justify-content-center"><i class="bi bi-clock-fill"></i></div>
+            <div class="upd-tx">
+              <div class="upd-tl">Reported on</div>
+              <div class="upd-ts">{{ issue.created_at|date:"l, d M Y · H:i" }}</div>
+            </div>
+          </div>
+          <div class="upd-row">
+            <div class="upd-ic si-green d-flex align-items-center justify-content-center"><i class="bi bi-geo-alt-fill"></i></div>
+            <div class="upd-tx">
+              <div class="upd-tl">{{ issue.ward.name }}</div>
+              <div class="upd-ts">Ward · {{ issue.ward.district.name|default:"Dar es Salaam" }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Feedback #}
+      {% if issue.status == 'RESOLVED' %}
+      <div class="card mb-3">
+        <div class="card-header"><span class="card-title"><i class="bi bi-star me-1" style="color:var(--amber)"></i> Feedback</span></div>
+        <div class="card-body">
+          {% if issue.rating %}
+            <div style="margin-bottom:6px">
+              {% for n in "12345" %}<i class="bi {% if forloop.counter <= issue.rating %}bi-star-fill{% else %}bi-star{% endif %}" style="color:var(--amber);font-size:1.15rem"></i>{% endfor %}
+              <span style="font-size:.84rem;color:var(--muted);margin-left:6px">{{ issue.rating }}/5</span>
+            </div>
+            {% if issue.feedback_comment %}
+            <p style="font-size:.9rem;color:var(--text2);margin:0;line-height:1.6">{{ issue.feedback_comment }}</p>
+            {% endif %}
+          {% else %}
+            <p style="font-size:.88rem;color:var(--text2);margin-bottom:12px">This request has been resolved — let us know how it went.</p>
+            <form method="post" action="{% url 'issues:feedback' issue.pk %}">
+              {% csrf_token %}
+              <div id="ratingStars" style="display:flex;gap:6px;margin-bottom:12px">
+                {% for n in "12345" %}
+                <i class="bi bi-star star-pick" data-value="{{ n }}" style="cursor:pointer;font-size:1.5rem;color:var(--amber)"></i>
+                {% endfor %}
+              </div>
+              <input type="hidden" name="rating" id="ratingInput" value="" required>
+              <textarea name="feedback_comment" class="form-control mb-2" rows="2" placeholder="Tell us about your experience (optional)"></textarea>
+              <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-send me-1"></i> Submit Feedback</button>
+            </form>
+            <script>
+              (function () {
+                var stars = document.querySelectorAll('#ratingStars .star-pick');
+                var input = document.getElementById('ratingInput');
+                stars.forEach(function (star) {
+                  star.addEventListener('click', function () {
+                    var value = parseInt(star.dataset.value, 10);
+                    input.value = value;
+                    stars.forEach(function (s) {
+                      s.className = 'bi star-pick ' + (parseInt(s.dataset.value, 10) <= value ? 'bi-star-fill' : 'bi-star');
+                    });
+                  });
+                });
+              })();
+            </script>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# Quick actions #}
+      <div class="card">
+        <div class="card-header"><span class="card-title">Quick Actions</span></div>
+        <div class="card-body" style="padding:12px !important;display:flex;flex-direction:column;gap:8px">
+          <a href="{% url 'citizens:portal' %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+            <i class="bi bi-house"></i> Back to My Portal
+          </a>
+          <a href="{% url 'issues:submit' %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+            <i class="bi bi-plus-circle"></i> Report Another Issue
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% else %}
+{# ══════════════════════════════════════════════════════════════ #}
+{# ── STAFF VIEW ──────────────────────────────────────────────── #}
+{# ══════════════════════════════════════════════════════════════ #}
 
 {# ── Header ── #}
 <div class="d-flex align-items-start justify-content-between mb-4">
@@ -11,22 +241,16 @@
     <div class="page-header-p">{{ issue.reference_no }} &nbsp;·&nbsp; Reported by {{ issue.citizen.full_name }}</div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
-    {% if user.role == 'CITIZEN' %}
-      <a class="btn btn-outline btn-sm" href="{% url 'citizens:portal' %}">
-        <i class="bi bi-arrow-left"></i> Back
-      </a>
-    {% else %}
-      <a class="btn btn-outline btn-sm" href="{% url 'issues:list' %}">
-        <i class="bi bi-arrow-left"></i> Back
-      </a>
-      <a class="btn btn-outline btn-sm" href="{% url 'issues:update' issue.pk %}">
-        <i class="bi bi-pencil"></i> Update
-      </a>
-      <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid transparent"
-              data-bs-toggle="modal" data-bs-target="#deleteModal">
-        <i class="bi bi-trash"></i> Delete
-      </button>
-    {% endif %}
+    <a class="btn btn-outline btn-sm" href="{% url 'issues:list' %}">
+      <i class="bi bi-arrow-left"></i> Back
+    </a>
+    <a class="btn btn-outline btn-sm" href="{% url 'issues:update' issue.pk %}">
+      <i class="bi bi-pencil"></i> Update
+    </a>
+    <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid transparent"
+            data-bs-toggle="modal" data-bs-target="#deleteModal">
+      <i class="bi bi-trash"></i> Delete
+    </button>
   </div>
 </div>
 
@@ -75,7 +299,7 @@
     </div>
 
     {# Internal notes — staff only #}
-    {% if issue.internal_notes and user.role != 'CITIZEN' %}
+    {% if issue.internal_notes %}
     <div class="card mb-3" style="border-left:3px solid var(--amber)">
       <div class="card-header">
         <span class="card-title"><i class="bi bi-lock me-1" style="color:var(--amber)"></i> Internal Notes</span>
@@ -87,8 +311,7 @@
     </div>
     {% endif %}
 
-    {# SMS Conversation — staff-relayed two-way SMS (slide 22) #}
-    {% if user.role != 'CITIZEN' %}
+    {# SMS Conversation — staff-relayed two-way SMS #}
     <div class="card mb-3">
       <div class="card-header">
         <span class="card-title"><i class="bi bi-chat-left-dots me-1" style="color:var(--accent)"></i> SMS Conversation</span>
@@ -120,7 +343,6 @@
         {% endif %}
       </div>
     </div>
-    {% endif %}
 
     {# Comments #}
     <div class="card">
@@ -129,7 +351,6 @@
         <span class="badge badge-gray">{{ comments|length }}</span>
       </div>
 
-      {# Comment list #}
       <div style="padding:0 20px">
         {% for comment in comments %}
         <div style="padding:14px 0;border-bottom:1px solid var(--border);display:flex;gap:12px">
@@ -164,7 +385,6 @@
         {% endfor %}
       </div>
 
-      {# Add comment form #}
       <div style="padding:16px 20px;border-top:1px solid var(--border);background:var(--surface2);border-radius:0 0 var(--r3) var(--r3)">
         <form method="post">
           {% csrf_token %}
@@ -172,14 +392,10 @@
             {{ comment_form.body }}
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-            {% if user.role != 'CITIZEN' %}
             <label style="display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--text2);cursor:pointer">
               {{ comment_form.is_internal }}
               <span>Mark as internal (staff only)</span>
             </label>
-            {% else %}
-            <span></span>
-            {% endif %}
             <button type="submit" class="btn btn-primary btn-sm">
               <i class="bi bi-send me-1"></i> Post Comment
             </button>
@@ -233,7 +449,7 @@
       </div>
     </div>
 
-    {# Feedback / rating card — slides 21 & 23 #}
+    {# Feedback / rating card #}
     {% if issue.status == 'RESOLVED' %}
     <div class="card mb-3">
       <div class="card-header"><span class="card-title"><i class="bi bi-star me-1" style="color:var(--amber)"></i> Feedback</span></div>
@@ -246,34 +462,6 @@
           {% if issue.feedback_comment %}
           <p style="font-size:.85rem;color:var(--text2);margin:0;line-height:1.6">{{ issue.feedback_comment }}</p>
           {% endif %}
-        {% elif user.role == 'CITIZEN' and issue.citizen.user_id == user.id %}
-          <p style="font-size:.85rem;color:var(--text2);margin-bottom:12px">This request has been resolved — let us know how it went.</p>
-          <form method="post" action="{% url 'issues:feedback' issue.pk %}">
-            {% csrf_token %}
-            <div id="ratingStars" style="display:flex;gap:6px;margin-bottom:12px">
-              {% for n in "12345" %}
-              <i class="bi bi-star star-pick" data-value="{{ n }}" style="cursor:pointer;font-size:1.4rem;color:var(--amber)"></i>
-              {% endfor %}
-            </div>
-            <input type="hidden" name="rating" id="ratingInput" value="" required>
-            <textarea name="feedback_comment" class="form-control mb-2" rows="2" placeholder="Tell us about your experience (optional)"></textarea>
-            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-send me-1"></i> Submit Feedback</button>
-          </form>
-          <script>
-            (function () {
-              var stars = document.querySelectorAll('#ratingStars .star-pick');
-              var input = document.getElementById('ratingInput');
-              stars.forEach(function (star) {
-                star.addEventListener('click', function () {
-                  var value = parseInt(star.dataset.value, 10);
-                  input.value = value;
-                  stars.forEach(function (s) {
-                    s.className = 'bi star-pick ' + (parseInt(s.dataset.value, 10) <= value ? 'bi-star-fill' : 'bi-star');
-                  });
-                });
-              });
-            })();
-          </script>
         {% else %}
           <p style="font-size:.85rem;color:var(--muted);margin:0">No feedback submitted yet.</p>
         {% endif %}
@@ -320,35 +508,25 @@
     <div class="card">
       <div class="card-header"><span class="card-title">Quick Actions</span></div>
       <div class="card-body" style="padding:12px !important;display:flex;flex-direction:column;gap:8px">
-        {% if user.role == 'CITIZEN' %}
-          <a href="{% url 'citizens:portal' %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
-            <i class="bi bi-house"></i> Back to My Portal
-          </a>
-          <a href="{% url 'issues:submit' %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
-            <i class="bi bi-plus-circle"></i> Report Another Issue
-          </a>
-        {% else %}
-          <a href="{% url 'issues:update' issue.pk %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
-            <i class="bi bi-pencil-square"></i> Update Status / Officer
-          </a>
-          <a href="{% url 'notifications:compose' %}?recipient={{ issue.citizen.phone_number|urlencode }}&issue={{ issue.pk }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
-            <i class="bi bi-chat-dots"></i> Reply via SMS
-          </a>
-          <a href="{% url 'citizens:detail' issue.citizen.pk %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
-            <i class="bi bi-person"></i> View Citizen Profile
-          </a>
-          <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid transparent;justify-content:flex-start;gap:8px"
-                  data-bs-toggle="modal" data-bs-target="#deleteModal">
-            <i class="bi bi-trash"></i> Delete Issue
-          </button>
-        {% endif %}
+        <a href="{% url 'issues:update' issue.pk %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+          <i class="bi bi-pencil-square"></i> Update Status / Officer
+        </a>
+        <a href="{% url 'notifications:compose' %}?recipient={{ issue.citizen.phone_number|urlencode }}&issue={{ issue.pk }}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+          <i class="bi bi-chat-dots"></i> Reply via SMS
+        </a>
+        <a href="{% url 'citizens:detail' issue.citizen.pk %}" class="btn btn-outline btn-sm" style="justify-content:flex-start;gap:8px">
+          <i class="bi bi-person"></i> View Citizen Profile
+        </a>
+        <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid transparent;justify-content:flex-start;gap:8px"
+                data-bs-toggle="modal" data-bs-target="#deleteModal">
+          <i class="bi bi-trash"></i> Delete Issue
+        </button>
       </div>
     </div>
 
   </div>
 </div>
 
-{% if user.role != 'CITIZEN' %}
 {# ── Log Incoming SMS modal — staff-relayed two-way SMS ── #}
 <div class="modal fade" id="logIncomingModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
@@ -390,7 +568,6 @@
     </div>
   </div>
 </div>
-{% endif %}
 
 {# ── Delete modal ── #}
 <div class="modal fade" id="deleteModal" tabindex="-1">
@@ -421,5 +598,7 @@
     </div>
   </div>
 </div>
+
+{% endif %}
 
 {% endblock %}
