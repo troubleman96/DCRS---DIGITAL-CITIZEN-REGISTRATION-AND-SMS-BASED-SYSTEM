@@ -77,5 +77,71 @@
         setTimeout(() => el.remove(), 400);
       }, 4000);
     });
+
+    // ── Show / hide password ─────────────────────────────────────────────
+    document.querySelectorAll('input[type="password"]').forEach(input => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "pw-toggle";
+      btn.setAttribute("aria-label", "Toggle password visibility");
+      btn.setAttribute("aria-pressed", "false");
+      btn.innerHTML = '<i class="bi bi-eye"></i>';
+
+      const wrap = input.closest(".input-icon-wrap");
+      if (wrap) {
+        wrap.classList.add("pw-field");
+        wrap.appendChild(btn);
+      } else {
+        const pos = document.createElement("span");
+        pos.className = "pw-field";
+        pos.style.cssText = "position:relative;display:block";
+        input.parentNode.insertBefore(pos, input);
+        pos.appendChild(input);
+        pos.appendChild(btn);
+      }
+
+      btn.addEventListener("click", () => {
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        btn.innerHTML = show ? '<i class="bi bi-eye-slash"></i>' : '<i class="bi bi-eye"></i>';
+        btn.setAttribute("aria-pressed", show ? "true" : "false");
+        input.focus();
+      });
+    });
+
+    // ── Multi-step registration wizard ───────────────────────────────────
+    const regForm = document.getElementById("regForm");
+    if (regForm) {
+      const steps = regForm.querySelectorAll(".reg-step");
+      const rp = regForm.querySelectorAll(".rp-step");
+      let cur = 0;
+
+      function showStep(i) {
+        steps.forEach((s, idx) => { s.hidden = idx !== i; });
+        rp.forEach((p, idx) => {
+          p.classList.toggle("active", idx === i);
+          p.classList.toggle("done", idx < i);
+        });
+        cur = i;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        const first = steps[i].querySelector("input, select, textarea");
+        if (first) first.focus();
+      }
+
+      regForm.querySelectorAll("[data-next]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const fields = steps[cur].querySelectorAll("input, select, textarea");
+          let ok = true;
+          fields.forEach(f => { if (!f.disabled && !f.reportValidity()) ok = false; });
+          if (ok && cur < steps.length - 1) showStep(cur + 1);
+        });
+      });
+
+      regForm.querySelectorAll("[data-back]").forEach(btn => {
+        btn.addEventListener("click", () => { if (cur > 0) showStep(cur - 1); });
+      });
+
+      showStep(0);
+    }
   });
 })();

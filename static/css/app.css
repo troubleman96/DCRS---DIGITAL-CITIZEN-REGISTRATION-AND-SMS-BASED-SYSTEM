@@ -359,6 +359,17 @@ textarea.form-control { resize: vertical; min-height: 96px; }
 .input-icon-wrap { position: relative; }
 .input-icon-wrap > i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 0.88rem; pointer-events: none; z-index: 2; }
 .input-icon-wrap .form-control { padding-left: 36px !important; }
+.pw-toggle {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; z-index: 3; font-size: 1rem; line-height: 1;
+  padding: 5px; border-radius: 6px; display: inline-flex; align-items: center;
+  transition: color .15s;
+}
+.pw-toggle:hover { color: var(--accent); }
+.input-icon-wrap.pw-field .form-control, .pw-field .form-control { padding-right: 42px !important; }
+.form-stack { display: flex; flex-direction: column; gap: 6px; }
+.form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
 /* ── Table ───────────────────────────────────────────────────── */
 .dcrs-table {
@@ -576,7 +587,7 @@ textarea.form-control { resize: vertical; min-height: 96px; }
 /* ── Auth Page ───────────────────────────────────────────────── */
 .auth-wrap { min-height: 100vh; display: flex; }
 .auth-side {
-  flex: 1.1; position: relative; overflow: hidden;
+  flex: 1.1; position: sticky; top: 0; height: 100vh; overflow: hidden;
   background: linear-gradient(155deg,#0c2980 0%,#1d4ed8 55%,#1e3fa5 100%);
   display: flex; flex-direction: column; padding: 44px;
 }
@@ -588,10 +599,7 @@ textarea.form-control { resize: vertical; min-height: 96px; }
 .auth-circle { position: absolute; border-radius: 50%; pointer-events: none; }
 .auth-circle.c1 { right: -100px; top: -100px; width: 360px; height: 360px; border: 70px solid rgba(255,255,255,.05); }
 .auth-circle.c2 { left:  -80px; bottom: -80px; width: 280px; height: 280px; border: 55px solid rgba(255,255,255,.04); }
-.auth-side-brand { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; }
-.auth-side-brand .brand-name { color: #fff; font-size: .95rem; }
-.auth-side-brand .brand-sub  { color: rgba(255,255,255,.6); }
-.auth-side-body { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 32px 0; }
+.auth-side-body { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 24px 0; }
 .auth-side-body h2 { color: #fff; font-size: clamp(1.45rem,2.5vw,2.1rem); font-weight: 800; line-height: 1.15; letter-spacing: -.025em; max-width: 14ch; margin-bottom: 13px; }
 .auth-side-body p  { color: rgba(255,255,255,.65); font-size: .88rem; max-width: 40ch; line-height: 1.7; margin-bottom: 26px; }
 .auth-chips { display: flex; flex-wrap: wrap; gap: 7px; }
@@ -620,6 +628,15 @@ textarea.form-control { resize: vertical; min-height: 96px; }
 .auth-sec-title i { color: var(--accent); }
 .auth-sec-note { font-size: .84rem; color: var(--muted); margin: 0 0 16px; line-height: 1.6; }
 .auth-register .form-label { font-size: .78rem; }
+
+/* Registration wizard */
+.reg-progress { display: flex; gap: 7px; margin-bottom: 22px; }
+.rp-step { flex: 1; height: 7px; border-radius: 99px; background: var(--border); transition: background .25s, box-shadow .25s; }
+.rp-step.active { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+.rp-step.done { background: var(--accent3); }
+.reg-step[hidden] { display: none; }
+.reg-nav { display: flex; gap: 10px; padding-top: 18px; }
+.reg-nav .btn { min-width: 130px; justify-content: center; }
 .auth-form-title { font-size: 1.55rem; font-weight: 800; letter-spacing: -.025em; color: var(--text); margin-bottom: 5px; }
 .auth-form-sub   { font-size: .84rem; color: var(--muted); margin-bottom: 28px; }
 .auth-corner-toggle { position: absolute; top: 18px; right: 18px; }
@@ -663,6 +680,7 @@ textarea.form-control { resize: vertical; min-height: 96px; }
   .lp-stat:nth-child(3) { border-right: none; }
   .feat-grid { grid-template-columns: 1fr; }
   .prob-grid { grid-template-columns: 1fr; }
+  .form-grid-2 { grid-template-columns: 1fr; }
   .lp-footer { padding: 18px 20px; }
   .lp-footer-in { flex-direction: column; text-align: center; }
   .hero-h1 { font-size: 2.1rem; }
