@@ -9,12 +9,16 @@ Handles all SMS and in-app notification communication in DCRS — real outbound 
 - **`SENDAFRICA_API_KEY` set** → calls `POST {SENDAFRICA_BASE_URL}/v1/sms/` with an `X-API-Key` header. On success, stores the returned `message_id` in `SMSLog.reference_id` and sets `status=SENT`. On any SendAfrica error (`invalid_phone`, `insufficient_credits`, `rate_limit_exceeded`, etc.) or network exception, sets `status=FAILED` with `error_message` populated — the caller never has to handle exceptions itself.
 - **No API key configured** → falls back to an "Internal Simulator" that creates the `SMSLog` as `SENT` instantly, with no network call. This is the default for local dev/demo — no SendAfrica account required to run the app.
 
+`send_issue_update_sms(issue, message)` is the issue-flow helper built on `send_sms`. It prefixes the citizen-visible text with the issue reference (`DCRS ISS-XXXXXXXXXX: …`) and **only sends when the reporting citizen's registration is `APPROVED` and a phone number exists** — pending/rejected registrations never receive issue SMS (their approval/rejection text is the SMS for them). It no-ops (returns `None`) instead of raising.
+
 ```python
 # .env
 SENDAFRICA_BASE_URL=https://api.sendafrica.online
 SENDAFRICA_API_KEY=                 # blank = simulator mode
 SENDAFRICA_SENDER_ID=                # optional sender ID shown on the recipient's phone
 ```
+
+**Credits:** a drained account fails sends with `[insufficient_credits]` — the message is logged as `FAILED` with the provider's error and the caller never crashes. Check the balance with `GET {SENDAFRICA_BASE_URL}/v1/credits/balance` (header `X-API-Key: <key>`, response `data.balance` is the credit count) and top up from the SendAfrica dashboard. Live testing against a Tanzanian number cost TZS 22 (1 credit) per message.
 
 ### Delivery webhook
 
@@ -29,6 +33,24 @@ Until that's configured, every send still shows `SENT` (accepted by the network)
 ### Phone number format
 
 SendAfrica accepts Tanzania numbers in `07XXXXXXXX`, `+2557XXXXXXXX`, or `2557XXXXXXXX` form and normalises automatically. In practice, `06XX`-prefixed numbers (Airtel/Halotel ranges outside the documented `071`–`078` list) have also been confirmed to work against the live API.
+
+## Where SMS fires
+
+Every meaningful state change in the app texts the right person automatically — the goal is that no party is ever left guessing.
+
+| Event | Trigger | Receiver |
+|---|---|---|
+| New citizen registration | `apps/citizens/signals.py` (`notify_officers_of_new_registration`) | Ward officer(s) + every admin |
+| Registration approved / rejected | `apps/citizens/views.py` (`CitizenApproveView` / `CitizenRejectView`) | The citizen |
+| Issue submitted | `apps/issues/views.py` (`IssueCreateView.form_valid`) | The citizen (confirmation) |
+| Status change (OPEN/IN_PROGRESS/ESCALATED/RESOLVED/CLOSED) | `apps/issues/views.py` (`IssueUpdateView.form_valid`) | The citizen |
+| Officer assigned | `IssueUpdateView.form_valid` | The citizen |
+| Technician appointment set/changed | `IssueUpdateView.form_valid` | The citizen |
+| Staff posts a public comment | `apps/issues/views.py` (`IssueDetailView.post`) | The citizen |
+| Citizen rates a resolved issue | `IssueFeedbackView.post` | The citizen (thank-you) |
+| Staff Compose / Broadcast | `ComposeSMSView` / `BroadcastSMSView` | The chosen recipient(s) |
+
+All citizen-facing issue SMS go through `send_issue_update_sms`, which applies the `APPROVED`-citizen + phone-number guard and prefixes the issue reference.
 
 ## Models
 

@@ -66,3 +66,24 @@ def send_sms(recipient, message_body, reference_id=""):
 
 def broadcast_sms(recipients, message_body):
     return [send_sms(recipient, message_body) for recipient in recipients]
+
+
+def send_issue_update_sms(issue, message):
+    """SMS the reporting citizen about their issue.
+
+    Only fires for citizens whose registration has been APPROVED — pending/rejected
+    registrations are not yet active users. No-op (returns None) when there is no
+    citizen, no approved status, or no phone number to reach.
+    """
+    citizen = getattr(issue, "citizen", None)
+    if citizen is None:
+        return None
+    if citizen.status != citizen.Status.APPROVED:
+        return None
+    if not citizen.phone_number:
+        return None
+    return send_sms(
+        citizen.phone_number,
+        f"DCRS {issue.reference_no}: {message}",
+        reference_id=issue.reference_no,
+    )

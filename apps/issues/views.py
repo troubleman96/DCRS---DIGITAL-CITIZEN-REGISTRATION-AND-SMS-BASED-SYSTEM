@@ -7,7 +7,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, T
 
 from apps.accounts.mixins import WardScopedQuerysetMixin
 from apps.citizens.models import Citizen
-from apps.notifications.services import send_sms
+from apps.notifications.services import send_issue_update_sms
 
 from .forms import IssueCommentForm, IssueFeedbackForm, IssueForm, IssueStatusForm
 from .models import Issue, IssueComment
@@ -74,6 +74,14 @@ class IssueCreateView(LoginRequiredMixin, CreateView):
                 pass
         return initial
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        send_issue_update_sms(
+            self.object,
+            "Your request has been received and is now awaiting a ward officer.",
+        )
+        return response
+
 
 class IssueDetailView(WardScopedQuerysetMixin, LoginRequiredMixin, DetailView):
     model = Issue
@@ -97,6 +105,8 @@ class IssueDetailView(WardScopedQuerysetMixin, LoginRequiredMixin, DetailView):
             comment.author = request.user
             comment.save()
             messages.success(request, "Comment added.")
+            if request.user.role != request.user.Role.CITIZEN and not comment.is_internal:
+                send_issue_update_sms(self.object, f"New update from the ward: {comment.body[:120]}")
         return redirect("issues:detail", pk=self.object.pk)
 
 
@@ -111,22 +121,33 @@ class IssueUpdateView(WardScopedQuerysetMixin, LoginRequiredMixin, UpdateView):
         response = super().form_valid(form)
         issue = self.object
 
+        # SMS the citizen whenever the status moves, so they're never left guessing.
+        if issue.status != previous.status:
+            if issue.status == Issue.Status.OPEN:
+                send_issue_update_sms(issue, "Your request has been reopened. Please check your DCRS portal for updates.")
+            elif issue.status == Issue.Status.IN_PROGRESS:
+                send_issue_update_sms(issue, "Your request is now being handled by the ward office.")
+            elif issue.status == Issue.Status.ESCALATED:
+                send_issue_update_sms(issue, "Your request has been escalated to district level for priority action.")
+            elif issue.status == Issue.Status.RESOLVED:
+                send_issue_update_sms(issue, "Your request has been resolved. Please rate your experience in your DCRS portal.")
+            elif issue.status == Issue.Status.CLOSED:
+                send_issue_update_sms(issue, "Your request has been closed.")
+
+        if issue.assigned_officer_id and issue.assigned_officer_id != previous.assigned_officer_id:
+            name = issue.assigned_officer.get_full_name() or issue.assigned_officer.username
+            send_issue_update_sms(issue, f"Officer {name} has been assigned to your request.")
+
         appointment_changed = (
             issue.assigned_technician_name and issue.appointment_at
             and (issue.assigned_technician_name != previous.assigned_technician_name
                  or issue.appointment_at != previous.appointment_at)
         )
         if appointment_changed:
-            send_sms(
-                issue.citizen.phone_number,
-                f"Update on {issue.reference_no}: technician {issue.assigned_technician_name} is scheduled to "
-                f"visit on {issue.appointment_at.strftime('%d %b %Y, %H:%M')}.",
-            )
-
-        if issue.status == Issue.Status.RESOLVED and previous.status != Issue.Status.RESOLVED:
-            send_sms(
-                issue.citizen.phone_number,
-                f"Your request {issue.reference_no} has been resolved. Please rate the service in your DCRS portal.",
+            send_issue_update_sms(
+                issue,
+                f"Technician {issue.assigned_technician_name} is scheduled to visit on "
+                f"{issue.appointment_at.strftime('%d %b %Y, %H:%M')}.",
             )
 
         return response
@@ -147,6 +168,7 @@ class IssueFeedbackView(LoginRequiredMixin, View):
         if form.is_valid():
             form.save()
             messages.success(request, "Thanks for your feedback!")
+            send_issue_update_sms(issue, "Thank you for your feedback. It helps us serve your community better.")
         else:
             messages.error(request, "Please choose a rating between 1 and 5.")
         return redirect("issues:detail", pk=issue.pk)

@@ -24,7 +24,7 @@ Central configuration for the entire project. Key sections:
 | `STATIC_URL` / `STATICFILES_DIRS` | Served from `static/` in dev. |
 | `MEDIA_URL` / `MEDIA_ROOT` | User uploads stored in `media/`. |
 | `EMAIL_BACKEND` | Console backend in dev — emails print to terminal. |
-| `SENDAFRICA_BASE_URL` / `SENDAFRICA_API_KEY` / `SENDAFRICA_SENDER_ID` | Real SMS gateway config, read from env. Leave `SENDAFRICA_API_KEY` blank to use the internal simulator (default for dev). See `apps/notifications/README.md`. |
+| `SENDAFRICA_BASE_URL` / `SENDAFRICA_API_KEY` / `SENDAFRICA_SENDER_ID` | Real SMS gateway config, read from env. Leave `SENDAFRICA_API_KEY` blank to use the internal simulator (default for dev). Account balance is checked via `GET {BASE}/v1/credits/balance`; a drained account fails sends gracefully as `FAILED` `SMSLog` rows. See `apps/notifications/README.md`. |
 | `TEMPLATES[0]["OPTIONS"]["context_processors"]` | Includes `apps.notifications.context_processors.notifications`, which injects `unread_notifications`/`unread_notifications_count` into every template for the bell-icon dropdown. |
 
 ### `urls.py`

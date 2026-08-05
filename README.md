@@ -188,6 +188,31 @@ https://<your-domain>/portal/sms/callback/
 
 This lets `SMSCallbackView` flip `SENT` → `DELIVERED`/`FAILED` automatically as the network confirms delivery. See `apps/notifications/README.md` for the full integration details.
 
+### Where SMS goes out — every trigger
+
+Communication is deliberate: whenever something about a citizen's registration or a service request changes, the right person gets a text. Issue-flow messages go through `send_issue_update_sms` (in `apps/notifications/services.py`); everything else goes through `send_sms`.
+
+| Event | Who is texted | Message covers |
+|---|---|---|
+| Citizen registration created | The ward's officer(s) **and every admin** | "New citizen registration awaiting your approval" |
+| Registration approved | The citizen | Approval + "log in to your citizen portal" |
+| Registration rejected | The citizen | The rejection reason |
+| Issue submitted | The citizen | Confirmation with reference no. |
+| Issue → `IN_PROGRESS` | The citizen | "now being handled by the ward office" |
+| Issue → `ESCALATED` | The citizen | "escalated to district level for priority action" |
+| Issue → `RESOLVED` | The citizen | "resolved — please rate your experience" |
+| Issue → `CLOSED` | The citizen | "has been closed" |
+| Issue reopened (→ `OPEN`) | The citizen | "has been reopened" |
+| Officer assigned | The citizen | Assignee's name |
+| Technician appointment set | The citizen | Technician name + visit date/time |
+| Staff posts a public comment | The citizen | The comment text |
+| Citizen rates a resolved issue | The citizen | Thank-you for the feedback |
+| Staff Compose / Broadcast | The recipient(s) | Ad-hoc one-off and ward-wide messages |
+
+**Guard:** `send_issue_update_sms` only texts citizens whose registration is `APPROVED` and who have a phone number — pending/rejected registrations never get issue SMS (their approval/rejection text is the SMS for them).
+
+**Credits:** if the SendAfrica account runs out of credits, sends fail with `[insufficient_credits]` and land in the SMS Log as `FAILED` — never a crash. Check the balance with `GET https://api.sendafrica.online/v1/credits/balance` (header `X-API-Key: <key>`) and top up from the dashboard. Typical cost per message: TZS 22 (1 credit).
+
 ---
 
 ## Test Credentials
