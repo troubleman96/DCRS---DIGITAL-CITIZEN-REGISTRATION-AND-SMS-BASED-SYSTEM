@@ -6,7 +6,7 @@
 
 <div class="page-header">
   <h2>Broadcast SMS</h2>
-  <p>Send a message to all approved citizens in a selected ward.</p>
+  <p>Send a message to all approved citizens in your ward.</p>
 </div>
 
 <div class="card" style="max-width:640px">
@@ -20,9 +20,15 @@
         <div class="alert-form-error">{{ form.non_field_errors }}</div>
       {% endif %}
       <div class="form-group">
-        <label class="form-label">Ward</label>
-        {{ form.ward }}
-        <div class="form-hint">Message will be sent to all APPROVED citizens in this ward.</div>
+        {% if officer_ward %}
+          <label class="form-label">Ward</label>
+          <input type="text" class="form-control form-control-lg" value="{{ officer_ward.name }}" disabled readonly>
+          <div class="form-hint">Broadcast goes to all APPROVED citizens in {{ officer_ward.name }} — your assigned ward.</div>
+        {% else %}
+          <label class="form-label">Ward</label>
+          {{ form.ward }}
+          <div class="form-hint">Leave blank to broadcast to all APPROVED citizens across every ward.</div>
+        {% endif %}
       </div>
       <div class="form-group">
         <label class="form-label">Message</label>

@@ -1,5 +1,7 @@
 from django import forms
 
+from apps.localities.models import Ward
+
 
 class ComposeSMSForm(forms.Form):
     recipient = forms.CharField(
@@ -11,10 +13,13 @@ class ComposeSMSForm(forms.Form):
 
 
 class BroadcastSMSForm(forms.Form):
-    ward = forms.CharField(
-        max_length=120,
+    ward = forms.ModelChoiceField(
+        queryset=Ward.objects.all(),
         required=False,
-        widget=forms.TextInput(attrs={"class": "form-control form-control-lg", "placeholder": "Ward name (optional)"}),
+        label="Ward",
+        widget=forms.Select(
+            attrs={"class": "form-select form-select-lg"},
+        ),
     )
     message_body = forms.CharField(widget=forms.Textarea(attrs={"class": "form-control", "rows": 5}))
 

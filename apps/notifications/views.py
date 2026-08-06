@@ -49,13 +49,42 @@ class BroadcastSMSView(LoginRequiredMixin, FormView):
     form_class = BroadcastSMSForm
     success_url = reverse_lazy("notifications:log")
 
+    def _target_ward(self, user, cleaned_ward):
+        """Officers may only broadcast to their own ward; admins may pick any."""
+        if user.role == user.Role.OFFICER and not user.is_superuser:
+            return user.ward
+        return cleaned_ward
+
+    def get_initial(self):
+        initial = super().get_initial()
+        user = self.request.user
+        if user.role == user.Role.OFFICER and not user.is_superuser and user.ward_id:
+            initial["ward"] = user.ward_id
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+        officer_ward = (
+            user.ward
+            if user.role == user.Role.OFFICER and not user.is_superuser
+            else None
+        )
+        context["officer_ward"] = officer_ward
+        return context
+
     def form_valid(self, form):
-        ward_name = form.cleaned_data.get("ward")
-        citizens = Citizen.objects.all()
-        if ward_name:
-            citizens = citizens.filter(ward__name__iexact=ward_name)
+        user = self.request.user
+        ward = self._target_ward(user, form.cleaned_data.get("ward"))
+        citizens = Citizen.objects.filter(status=Citizen.Status.APPROVED)
+        if ward:
+            citizens = citizens.filter(ward=ward)
         recipients = citizens.values_list("phone_number", flat=True)
         broadcast_sms(recipients, form.cleaned_data["message_body"])
+        messages.success(
+            self.request,
+            f"Broadcast sent to {len(recipients)} approved citizen(s).",
+        )
         return super().form_valid(form)
 
 
