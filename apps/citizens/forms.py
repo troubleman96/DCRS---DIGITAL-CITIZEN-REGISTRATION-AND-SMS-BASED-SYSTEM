@@ -14,6 +14,11 @@ class CitizenRegistrationForm(forms.ModelForm):
     """Creates the Citizen profile AND the linked login account in one step — the citizen can
     log in and use their portal immediately, even while their registration is still PENDING."""
 
+    username = forms.CharField(
+        label="Username",
+        required=False,
+        widget=forms.TextInput(attrs={**_CTRL_LG, "placeholder": "Choose a username (defaults to your phone number)"}),
+    )
     password1 = forms.CharField(
         label="Password",
         widget=forms.PasswordInput(attrs={**_CTRL_LG, "placeholder": "Choose a password"}),
@@ -22,6 +27,12 @@ class CitizenRegistrationForm(forms.ModelForm):
         label="Confirm Password",
         widget=forms.PasswordInput(attrs={**_CTRL_LG, "placeholder": "Re-enter password"}),
     )
+
+    def clean_username(self):
+        username = self.cleaned_data.get("username", "").strip()
+        if username and get_user_model().objects.filter(username=username).exists():
+            raise forms.ValidationError("That username is already taken.")
+        return username
 
     class Meta:
         model = Citizen

@@ -119,6 +119,8 @@ SENDAFRICA_SENDER_ID = os.getenv("SENDAFRICA_SENDER_ID", "")
 
 # ── Auth & session ────────────────────────────────────────────────────────────
 AUTH_USER_MODEL = "accounts.User"
+# Allow sign-in with either the username or the phone number
+AUTHENTICATION_BACKENDS = ["apps.accounts.backends.UsernameOrPhoneBackend"]
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "reports:dashboard"
 LOGOUT_REDIRECT_URL = "citizens:home"

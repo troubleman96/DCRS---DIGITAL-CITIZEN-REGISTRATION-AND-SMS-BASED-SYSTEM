@@ -81,7 +81,7 @@ class CitizenRegistrationView(CreateView):
         User = get_user_model()
         first_name, _, last_name = citizen.full_name.partition(" ")
         user = User(
-            username=citizen.phone_number,
+            username=form.cleaned_data.get("username") or citizen.phone_number,
             role=User.Role.CITIZEN,
             phone_number=citizen.phone_number,
             national_id=citizen.national_id,

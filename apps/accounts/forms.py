@@ -5,7 +5,7 @@ from django.contrib.auth.forms import AuthenticationForm
 class OfficerLoginForm(AuthenticationForm):
     username = forms.CharField(
         widget=forms.TextInput(
-            attrs={"class": "form-control form-control-lg", "placeholder": "Username"}
+            attrs={"class": "form-control form-control-lg", "placeholder": "Username or phone number"}
         )
     )
     password = forms.CharField(
